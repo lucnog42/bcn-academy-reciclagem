@@ -109,13 +109,17 @@ def info() -> dict:
     """O que o painel mostra (nunca a chave inteira)."""
     p = config.ia()
     c = config.chave(p["id"]) or ""
+    from nucleo import caminhos
     return {"provedor": p["id"], "nome": p["nome"], "modelo": p["modelo"], "base_url": p["base_url"],
+            "escopo_ia": p.get("escopo", "geral"), "marca": caminhos.marca(),
+            "origem_video": config.origem_chave("video"),
             "precisa_chave": p["chave"], "claude": bool(c) or not p["chave"],
             "origem": config.origem_chave(p["id"]), "fim": c[-4:] if c else "",
             "chave_video": bool(config.chave("video")),
             "fim_video": (config.chave("video") or "")[-4:],
             "provedores": [{"id": k, "nome": v["nome"], "base_url": v["base_url"], "modelo": v["modelo"],
-                            "chave": v["chave"], "tem_chave": bool(config.chave(k))}
+                            "chave": v["chave"], "tem_chave": bool(config.chave(k)),
+                            "origem": config.origem_chave(k)}
                            for k, v in config.PROVEDORES.items()]}
 
 

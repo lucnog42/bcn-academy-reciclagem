@@ -1,0 +1,33 @@
+# Formatos de história para os roteiros recomendados. A estrutura é a ordem das partes; cada
+# parte diz a intenção, e a IA escolhe as falas (já gravadas) ou escreve falas novas para ela.
+# Uma marca pode trocar ou acrescentar formatos em config/marcas/<marca>/roteiros.toml.
+
+[formatos.depoimento]
+nome = "Depoimento"
+descricao = "uma pessoa conta o que viveu; a prova vem do próprio material"
+estrutura = ["gancho: a frase mais forte, logo de cara", "quem fala e de onde veio", "o que viveu (o momento que mudou)", "a prova", "o convite"]
+duracao = 45
+
+[formatos.linha-do-tempo]
+nome = "Linha do tempo"
+descricao = "antes, durante e depois, em ordem"
+estrutura = ["gancho: onde chegou", "o começo", "o meio (a virada)", "onde está hoje", "o convite"]
+duracao = 50
+
+[formatos.problema-solucao]
+nome = "Problema → solução"
+descricao = "uma dor real do público, e como a marca resolve"
+estrutura = ["gancho: a dor em uma frase", "por que é difícil", "o que a marca faz", "a prova de que funciona", "o convite"]
+duracao = 40
+
+[formatos.convite]
+nome = "Convite"
+descricao = "chamada direta para uma ação com data"
+estrutura = ["gancho: o que está aberto", "o que a pessoa ganha", "a prova (quem já foi)", "como e até quando"]
+duracao = 30
+
+[formatos.varias-vozes]
+nome = "Várias vozes"
+descricao = "várias pessoas respondendo à mesma pergunta, em ritmo rápido"
+estrutura = ["a pergunta (fala nova ou texto)", "respostas curtas de pessoas diferentes", "a resposta mais forte por último", "o convite"]
+duracao = 40

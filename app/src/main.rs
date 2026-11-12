@@ -8,6 +8,7 @@
 //!     ng3-painel --snap painel.png --scene demo -- --acervo <pasta>   # headless
 
 mod app;
+mod extra;
 mod dados;
 mod filtro;
 mod plugins;
@@ -94,7 +95,9 @@ fn main() {
         on_key: Some(tecla),
         scenes: &[("demo", cenas::demo), ("preview", cenas::preview), ("config", cenas::config), ("video", cenas::video), ("chave", cenas::chave), ("motion", cenas::motion), ("recomendados", cenas::recomendados),
                   ("cortes", cenas::cortes), ("plugins", cenas::plugins),
-                  ("compacto", cenas::compacto), ("legenda", cenas::legenda), ("paginas", cenas::paginas)],
+                  ("compacto", cenas::compacto), ("legenda", cenas::legenda), ("paginas", cenas::paginas),
+                  ("roteiros", cenas::roteiros), ("importar", cenas::importar), ("clientes", cenas::clientes),
+                  ("roteiro_projeto", cenas::roteiro_projeto)],
         ..AppSpec::new("Video Automation NG3", (1360.0, 860.0), App::novo, ui::view)
     });
 }
@@ -180,6 +183,53 @@ mod cenas {
         let r = chamar(&s.base, "ping", json!({}));
         s.ler_chave_info_pub(&r);
         s.trocar_aba(app::Aba::Config);
+    }
+
+    /// A aba Roteiros com o roteiro mais recente aberto (precisa existir um em dados/…/roteiros/).
+    pub fn roteiros(s: &mut App) {
+        carregar(s);
+        let r = chamar(&s.base, "roteiros", json!({}));
+        s.resposta_extra(ponte::Pedido::Roteiros, r);
+        if let Some(id) = s.x.roteiros.iter().find(|r| r.status != "aprovado").or(s.x.roteiros.first()).map(|r| r.id.clone()) {
+            let r = chamar(&s.base, "roteiro", json!({"id": id}));
+            s.resposta_extra(ponte::Pedido::Roteiro(id), r);
+        }
+        let ims: Vec<_> = s.miniaturas.values().cloned().collect();
+        for im in ims { let _ = im.wait(); }
+        s.aba = app::Aba::Roteiros;
+    }
+
+    pub fn importar(s: &mut App) {
+        carregar(s);
+        let r = chamar(&s.base, "fontes", json!({}));
+        s.resposta_extra(ponte::Pedido::Fontes, r);
+        let ids: Vec<String> = s.x.fontes.iter().filter(|f| f.origem == "importada").map(|f| f.id.clone()).collect();
+        for id in ids {
+            let r = chamar(&s.base, "fonte_contar", json!({"id": id}));
+            s.resposta_extra(ponte::Pedido::FonteContar(id), r);
+        }
+        s.aba = app::Aba::Importar;
+    }
+
+    pub fn clientes(s: &mut App) {
+        carregar(s);
+        let r = chamar(&s.base, "ping", json!({}));
+        s.ler_chave_info_pub(&r);
+        s.x.clientes_aberto = true;
+    }
+
+    /// O projeto de um roteiro aprovado no preview, com os momentos de cada parte.
+    pub fn roteiro_projeto(s: &mut App) {
+        carregar(s);
+        let r = chamar(&s.base, "roteiros", json!({}));
+        s.resposta_extra(ponte::Pedido::Roteiros, r);
+        let Some(pasta) = s.x.roteiros.iter().find_map(|r| r.pasta.clone()) else { return };
+        s.abrir_preview(app::Alvo::Roteiro(pasta.clone()));
+        let e = chamar(&s.base, "motion", json!({"pasta": pasta}));
+        s.motion_chegou(&pasta, e);
+        s.miniaturas_broll_pub();
+        let ims: Vec<_> = s.miniaturas.values().cloned().collect();
+        for im in ims { let _ = im.wait(); }
     }
 
     /// O painel da chave da API aberto.

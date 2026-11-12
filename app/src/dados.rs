@@ -241,6 +241,20 @@ pub struct Momento {
     /// b-roll do acervo: candidatos achados e a sequência escolhida
     #[serde(default)]
     pub broll: Option<Broll>,
+    /// a função da imagem neste momento (provar, clima, contraste, so-a-pessoa), quando vem de um roteiro
+    #[serde(default)]
+    pub funcao: String,
+    /// o motion feito com HyperFrames (composição e render)
+    #[serde(default)]
+    pub motion_hf: Option<MotionHf>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct MotionHf {
+    #[serde(default)]
+    pub composicao: String,
+    #[serde(default)]
+    pub renderizado_em: String,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -363,4 +377,184 @@ pub struct MotionEstado {
     pub projeto: String,
     #[serde(default)]
     pub duracao_projeto: f32,
+}
+
+// ------------------------------------------------------------------ clientes, importar, roteiros
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Cliente {
+    pub slug: String,
+    #[serde(default)]
+    pub nome: String,
+    #[serde(default)]
+    pub molde: bool,
+}
+
+/// Uma fonte do cliente: as do acervo.toml (posts, cortes) e as pastas importadas pelo painel.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Fonte {
+    pub id: String,
+    #[serde(default)]
+    pub nome: String,
+    #[serde(default)]
+    pub tipo: String,
+    #[serde(default)]
+    pub raiz: String,
+    #[serde(default)]
+    pub ativo: bool,
+    #[serde(default)]
+    pub origem: String,
+    #[serde(default)]
+    pub existe: bool,
+    #[serde(default)]
+    pub indexados: u64,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct FonteConta {
+    #[serde(default)]
+    pub videos: u64,
+    #[serde(default)]
+    pub imagens: u64,
+    #[serde(default)]
+    pub transcritos: u64,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct RoteiroResumo {
+    pub id: String,
+    #[serde(default)]
+    pub titulo: String,
+    #[serde(default)]
+    pub resumo: Option<String>,
+    #[serde(default)]
+    pub formato: String,
+    #[serde(default)]
+    pub duracao: f32,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub criado_em: String,
+    #[serde(default)]
+    pub pasta: Option<String>,
+    #[serde(default)]
+    pub partes: usize,
+    #[serde(default)]
+    pub novas: usize,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Ideia {
+    pub id: String,
+    #[serde(default)]
+    pub titulo: String,
+    #[serde(default)]
+    pub formato: String,
+    #[serde(default)]
+    pub objetivo: String,
+    #[serde(default)]
+    pub gancho: String,
+    #[serde(default)]
+    pub por_que: String,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct FormatoRoteiro {
+    pub id: String,
+    #[serde(default)]
+    pub nome: String,
+    #[serde(default)]
+    pub descricao: String,
+    #[serde(default)]
+    pub duracao: u32,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct FuncaoRoteiro {
+    pub id: String,
+    #[serde(default)]
+    pub nome: String,
+    #[serde(default)]
+    pub descricao: String,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Banco {
+    #[serde(default)]
+    pub frases: u64,
+    #[serde(default)]
+    pub videos: u64,
+    #[serde(default)]
+    pub itens: u64,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Parte {
+    #[serde(default)]
+    pub parte: String,
+    #[serde(default)]
+    pub tipo: String,
+    #[serde(default)]
+    pub funcao: String,
+    #[serde(default)]
+    pub mostrar: String,
+    #[serde(default)]
+    pub por_que: String,
+    #[serde(default)]
+    pub texto: String,
+    #[serde(default)]
+    pub quem: String,
+    #[serde(default)]
+    pub video: String,
+    #[serde(default)]
+    pub ini: f32,
+    #[serde(default)]
+    pub fim: f32,
+    #[serde(default)]
+    pub item: String,
+    #[serde(default)]
+    pub dur: f32,
+    #[serde(default)]
+    pub cobertura: Vec<BrollCandidato>,
+    #[serde(default)]
+    pub escolhida: String,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Roteiro {
+    pub id: String,
+    #[serde(default)]
+    pub titulo: String,
+    #[serde(default)]
+    pub resumo: String,
+    #[serde(default)]
+    pub formato: String,
+    #[serde(default)]
+    pub duracao: f32,
+    #[serde(default)]
+    pub duracao_alvo: f32,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub pasta: Option<String>,
+    #[serde(default)]
+    pub projeto: Option<String>,
+    #[serde(default)]
+    pub partes: Vec<Parte>,
+}
+
+/// Um motion já renderizado do cliente, para reaproveitar noutro momento.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct MotionPronto {
+    pub id: String,
+    #[serde(default)]
+    pub arquivo: String,
+    #[serde(default)]
+    pub texto: String,
+    #[serde(default)]
+    pub tipo: String,
+    #[serde(default)]
+    pub item: String,
+    #[serde(default)]
+    pub dur: f32,
 }

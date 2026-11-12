@@ -56,6 +56,23 @@ pub enum Pedido {
     BrollCandidatos(String),
     /// id do momento: gravar a sequência escolhida
     BrollSequencia(String),
+    // clientes, importar, roteiros, motion (extra.rs)
+    CriarMarca,
+    Fontes,
+    /// id da fonte: adicionar, ativar, remover, indexar
+    FonteAcao(String),
+    FonteContar(String),
+    FonteTranscrever(String),
+    Roteiros,
+    RoteiroIdeias,
+    RoteiroEscrever,
+    Roteiro(String),
+    RoteiroAcao(String),
+    RoteiroAprovar(String),
+    RoteiroExportar(String),
+    MotionHf(String),
+    Biblioteca,
+    MotionReusar(String),
 }
 
 #[derive(Debug)]

@@ -14,21 +14,27 @@ use std::sync::{Arc, Mutex};
 pub enum Aba {
     #[default]
     Posts,
+    /// o ranking de reaproveitamento dos posts publicados (antes "recomendados")
     Recomendados,
+    /// roteiros recomendados a partir das falas transcritas
+    Roteiros,
     Cortes,
+    Importar,
     Plugins,
     Config,
 }
 
 impl Aba {
-    pub const TODAS: [Aba; 5] = [Aba::Posts, Aba::Recomendados, Aba::Cortes, Aba::Plugins, Aba::Config];
-    /// abas sem lista de posts/cortes (plugins, configurações)
-    pub fn sem_lista(self) -> bool { matches!(self, Aba::Plugins | Aba::Config) }
+    pub const TODAS: [Aba; 7] = [Aba::Posts, Aba::Recomendados, Aba::Roteiros, Aba::Cortes, Aba::Importar, Aba::Plugins, Aba::Config];
+    /// abas sem lista de posts/cortes (roteiros, importar, plugins, configurações)
+    pub fn sem_lista(self) -> bool { matches!(self, Aba::Roteiros | Aba::Importar | Aba::Plugins | Aba::Config) }
     pub fn rotulo(self) -> &'static str {
         match self {
             Aba::Posts => "posts",
-            Aba::Recomendados => "recomendados",
+            Aba::Recomendados => "repost",
+            Aba::Roteiros => "roteiros",
             Aba::Cortes => "cortes",
+            Aba::Importar => "importar",
             Aba::Plugins => "plugins",
             Aba::Config => "chaves e config",
         }
@@ -38,8 +44,9 @@ impl Aba {
 /// O que está aberto no preview.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Alvo {
-    Post(String),  // nome da pasta
-    Corte(String), // caminho relativo do corte
+    Post(String),    // nome da pasta
+    Corte(String),   // caminho relativo do corte
+    Roteiro(String), // pasta do projeto de um roteiro aprovado (_Roteiros/...)
 }
 
 pub struct Preview {
@@ -138,6 +145,8 @@ pub struct MotionUi {
     pub abordagens: HashMap<String, Vec<crate::dados::Abordagem>>,
     /// b-roll: os candidatos escolhidos, em ordem, por momento
     pub broll_sel: HashMap<String, Vec<String>>,
+    /// o momento com a lista de motions existentes aberta
+    pub biblioteca_para: Option<String>,
 }
 
 pub struct Tarefa {
@@ -220,6 +229,8 @@ pub struct App {
     /// vídeo com IA (OpenRouter): os modelos e o formulário aberto num momento
     pub video_modelos: Vec<VideoModelo>,
     pub modelos_prompt: Vec<crate::dados::ModeloPrompt>,
+    /// clientes, importar, roteiros, motions prontos (extra.rs)
+    pub x: crate::extra::Extra,
     pub video_form: Option<VideoForm>,
     /// a chave do OpenRouter para o vídeo, no mesmo painel das chaves (independe da IA das sugestões)
     pub chave_video: TextEdit,
@@ -271,6 +282,9 @@ pub struct ChaveInfo {
     pub valida: Option<bool>,
     pub erro: String,
     pub testando: bool,
+    /// "marca" (o cliente tem IA própria) ou "geral"
+    pub escopo_ia: String,
+    pub origem_video: String,
 }
 
 impl App {
@@ -299,7 +313,7 @@ impl App {
             motion: None, motion_seq: 0,
             chave: TextEdit::new(""), chave_aberta: false, chave_info: ChaveInfo::default(),
             ia_provedor: String::new(), ia_modelo: TextEdit::new(""), ia_base: TextEdit::new(""),
-            video_modelos: vec![], modelos_prompt: vec![], video_form: None, chave_video: TextEdit::new(""),
+            video_modelos: vec![], modelos_prompt: vec![], x: crate::extra::Extra::novo(), video_form: None, chave_video: TextEdit::new(""),
         }
     }
 
@@ -318,6 +332,8 @@ impl App {
             Ok(mut p) => {
                 p.pedir(Pedido::Ping, "ping", json!({}));
                 p.pedir(Pedido::ModelosPrompt, "modelos_prompt", json!({}));
+                p.pedir(Pedido::Fontes, "fontes", json!({}));
+                p.pedir(Pedido::Roteiros, "roteiros", json!({}));
                 p.pedir(Pedido::Estados, "estados", json!({}));
                 p.pedir(Pedido::Posts, "posts", json!({}));
                 p.pedir(Pedido::Cortes, "cortes", json!({}));
@@ -353,7 +369,7 @@ impl App {
             Aba::Posts => filtro::posts(&self.posts, &self.estados, &self.filtro),
             Aba::Recomendados => filtro::recomendados(&self.posts, &self.estados, &self.filtro),
             Aba::Cortes => filtro::cortes(&self.cortes, &self.filtro),
-            Aba::Plugins | Aba::Config => vec![],
+            Aba::Plugins | Aba::Config | Aba::Roteiros | Aba::Importar => vec![],
         };
         self.pagina = self.pagina.min(self.n_paginas() - 1);
         self.versao += 1;
@@ -474,13 +490,14 @@ impl App {
     pub fn trocar_aba(&mut self, aba: Aba) {
         if self.aba != aba {
             // a seleção é de posts ou de cortes: só some quando muda o tipo de item
-            let tipo = |a: Aba| match a { Aba::Cortes => 1, Aba::Plugins | Aba::Config => 2, _ => 0 };
+            let tipo = |a: Aba| match a { Aba::Cortes => 1, Aba::Plugins | Aba::Config | Aba::Roteiros | Aba::Importar => 2, _ => 0 };
             if tipo(aba) != 2 && tipo(self.aba) != 2 && tipo(aba) != tipo(self.aba) {
                 self.selecao.clear();
             }
             if !aba.sem_lista() { self.origem = aba; }
             self.aba = aba;
             self.refiltrar();
+            self.ao_entrar(aba);
         }
     }
 
@@ -488,13 +505,13 @@ impl App {
     pub fn itens_plugin(&self, so: Option<&Alvo>) -> Vec<Value> {
         let posts: Vec<&Post> = match so {
             Some(Alvo::Post(n)) => self.post(n).into_iter().collect(),
-            Some(Alvo::Corte(_)) => vec![],
+            Some(Alvo::Corte(_) | Alvo::Roteiro(_)) => vec![],
             None if self.origem != Aba::Cortes => self.selecao.iter().filter_map(|n| self.post(n)).collect(),
             None => vec![],
         };
         let cortes: Vec<&Corte> = match so {
             Some(Alvo::Corte(a)) => self.corte(a).into_iter().collect(),
-            Some(Alvo::Post(_)) => vec![],
+            Some(Alvo::Post(_) | Alvo::Roteiro(_)) => vec![],
             None if self.origem == Aba::Cortes => self.selecao.iter().filter_map(|a| self.corte(a)).collect(),
             None => vec![],
         };
@@ -611,10 +628,11 @@ impl App {
         let video = match &alvo {
             Alvo::Post(n) => self.post(n).and_then(|p| p.videos().next().cloned()),
             Alvo::Corte(a) => self.corte(a).map(|c| c.capa().to_string()),
+            Alvo::Roteiro(_) => None,
         };
         let imagens: Vec<String> = match &alvo {
             Alvo::Post(n) => self.post(n).map(|p| p.imagens().cloned().collect()).unwrap_or_default(),
-            Alvo::Corte(_) => vec![],
+            Alvo::Corte(_) | Alvo::Roteiro(_) => vec![],
         };
         // imagens do carrossel: um .jpg de 720 px do cache, não o original de 1440 px
         for img in imagens {
@@ -624,14 +642,14 @@ impl App {
         }
         let pasta = match &alvo {
             Alvo::Post(n) => self.post(n).map(|p| p.pasta.clone()),
-            Alvo::Corte(a) => Some(a.clone()),
+            Alvo::Corte(a) | Alvo::Roteiro(a) => Some(a.clone()),
         };
         self.motion = pasta.map(|pasta| {
             self.pedir(Pedido::Motion(pasta.clone()), "motion", json!({"pasta": pasta}));
             MotionUi { pasta, estado: None, contexto: TextEdit::new(""), contexto_salvo: String::new(),
                        textos: HashMap::new(), sugerindo: false, arrastando: false,
                        briefings: HashMap::new(), alternativas: HashMap::new(), pensando: HashSet::new(),
-                       abordagens: HashMap::new(), broll_sel: HashMap::new() }
+                       abordagens: HashMap::new(), broll_sel: HashMap::new(), biblioteca_para: None }
         });
         self.preview = Some(Preview { alvo, video: None, quadro: 0, palavras: vec![] });
         if let Some(v) = video { self.focar_video(v); }
@@ -747,6 +765,8 @@ impl App {
         i.modelo = txt("modelo");
         i.valida = r["valida"].as_bool();
         i.erro = txt("erro");
+        i.escopo_ia = txt("escopo_ia");
+        i.origem_video = txt("origem_video");
         i.testando = false;
         if let Ok(ps) = serde_json::from_value::<Vec<Provedor>>(r["provedores"].clone()) { i.provedores = ps; }
         i.modelos = r["modelos"].as_array().map(|v| v.iter().filter_map(|x| x.as_str().map(String::from)).collect())
@@ -769,6 +789,7 @@ impl App {
             .unwrap_or_default();
         definir_pilares(r["pilares"].as_array().map(|v| v.iter().filter_map(|x| x.as_str().map(String::from)).collect())
             .unwrap_or_default());
+        self.x.clientes = serde_json::from_value(r["clientes"].clone()).unwrap_or_default();
         let base = PathBuf::from(txt("base"));
         if !base.as_os_str().is_empty() && base != self.base {
             self.base = base;
@@ -796,6 +817,7 @@ impl App {
         self.falhas.clear();
         self.querem_miniatura.clear();
         self.carregando = true;
+        self.x = crate::extra::Extra::novo();
         self.refiltrar();
         self.abrir_ponte();
     }
@@ -819,7 +841,7 @@ impl App {
     /// Grava a escolha (provedor, modelo, endereço) e a chave digitada, se houver; remover tira a chave.
     pub fn salvar_chave(&mut self, remover: bool) {
         let mut dados = json!({"provedor": self.ia_provedor, "modelo": self.ia_modelo.text.trim(),
-                               "base_url": self.ia_base.text.trim()});
+                               "base_url": self.ia_base.text.trim(), "escopo": self.x.chave_escopo});
         let chave = self.chave.text.trim().to_string();
         if remover {
             dados["chave"] = json!("");
@@ -832,6 +854,11 @@ impl App {
         }
         self.chave_info.testando = true;
         self.pedir(Pedido::Chave, "chave", dados);
+    }
+
+    pub fn usar_ia_geral(&mut self) {
+        self.chave_info.testando = true;
+        self.pedir(Pedido::Chave, "chave", json!({"ia_geral": true}));
     }
 
     pub fn testar_chave(&mut self) {
@@ -969,7 +996,8 @@ impl App {
         let chave = self.chave_video.text.trim().to_string();
         if !remover && chave.is_empty() { self.aviso = Some("cole a chave do OpenRouter".into()); return; }
         self.chave_video = TextEdit::new("");
-        self.pedir(Pedido::Chave, "chave", json!({"so_chave": "video", "chave": if remover { String::new() } else { chave }}));
+        self.pedir(Pedido::Chave, "chave", json!({"so_chave": "video", "chave": if remover { String::new() } else { chave },
+                                                   "escopo": self.x.chave_escopo}));
         if self.video_modelos.is_empty() && !remover { self.pedir(Pedido::VideoModelos, "video_modelos", json!({})); }
     }
 
@@ -1166,7 +1194,11 @@ impl App {
         }
         let refs: Vec<String> = refs.into_iter()
             .chain(e.sugestoes.iter().flat_map(|s| s.referencias.iter().cloned())).collect();
+        let primeiro = e.sugestoes.first().map(|s| s.video.clone());
         m.estado = Some(e);
+        // projeto de roteiro: o vídeo em foco é o da primeira parte
+        if let Some(p) = self.preview.as_ref() && matches!(p.alvo, Alvo::Roteiro(_)) && p.video.is_none()
+            && let Some(v) = primeiro { self.focar_video(v); }
         for r in refs {
             if !self.miniaturas.contains_key(&r) { self.querem_miniatura.push(r); }
         }
@@ -1271,6 +1303,10 @@ impl App {
                 Chegada::Caiu(e) => { self.erro_ponte = Some(e); self.ponte = None; break; }
                 Chegada::Evento(v) => {
                     if v["evento"] == "tarefa" { self.evento_tarefa(&v); }
+                    if v["evento"] == "motion_atualizado" { self.motion_recarregar(); }
+                    if v["evento"] == "posts_atualizados" && v["lista"] == "roteiros" {
+                        self.pedir(Pedido::Roteiros, "roteiros", json!({}));
+                    }
                     if v["evento"] == "posts_atualizados" {
                         self.pedir(Pedido::Posts, "posts", json!({}));
                         self.pedir(Pedido::Cortes, "cortes", json!({}));
@@ -1287,6 +1323,8 @@ impl App {
                         if let Some(m) = self.motion.as_mut() { m.pensando.remove(&format!("{id}#broll")); }
                         self.aviso = Some(format!("b-roll: {erro}"));
                     }
+                    p @ (Pedido::RoteiroIdeias | Pedido::RoteiroEscrever | Pedido::RoteiroAprovar(_)
+                         | Pedido::CriarMarca | Pedido::FonteAcao(_)) => self.erro_extra(p, erro),
                     Pedido::PromptIa(chave) | Pedido::Abordagens(chave) => {
                         if let Some(m) = self.motion.as_mut() { m.pensando.remove(&chave); }
                         self.aviso = Some(format!("a IA não respondeu: {erro}"));
@@ -1439,6 +1477,10 @@ impl App {
             Pedido::VideoGerar => {}
             Pedido::PromptIa(chave) => self.prompt_chegou(&chave, r),
             Pedido::ModelosPrompt => self.modelos_prompt = serde_json::from_value(r).unwrap_or_default(),
+            p @ (Pedido::CriarMarca | Pedido::Fontes | Pedido::FonteAcao(_) | Pedido::FonteContar(_)
+                 | Pedido::FonteTranscrever(_) | Pedido::Roteiros | Pedido::RoteiroIdeias | Pedido::RoteiroEscrever
+                 | Pedido::Roteiro(_) | Pedido::RoteiroAcao(_) | Pedido::RoteiroAprovar(_) | Pedido::RoteiroExportar(_)
+                 | Pedido::MotionHf(_) | Pedido::Biblioteca | Pedido::MotionReusar(_)) => self.resposta_extra(p, r),
             Pedido::ModeloAplicar(chave) => {
                 let txt = r["texto"].as_str().unwrap_or("").to_string();
                 if let Some((id, alvo)) = chave.split_once('#') {

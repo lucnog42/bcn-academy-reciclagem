@@ -98,8 +98,9 @@ def libs_cuda() -> None:
     encontra o símbolo já carregado.
     """
     import ctypes
-    raiz = os.path.dirname(os.path.abspath(__file__))
-    base = os.path.join(raiz, ".venv-asr/lib/python3.11/site-packages/nvidia")
+    import glob
+    achados = sorted(glob.glob(caminhos.raiz(".venv-asr", "lib", "python3.*", "site-packages", "nvidia")))
+    base = achados[-1] if achados else caminhos.raiz(".venv-asr", "lib", "python3.11", "site-packages", "nvidia")
     for pacote in ("cublas", "cudnn"):
         d = os.path.join(base, pacote, "lib")
         if not os.path.isdir(d):
@@ -185,6 +186,11 @@ def caminho_saida(video: str, ext: str) -> str:
     `srt_do_post` e `colecao.carregar_transcricoes` leem); o dos cortes fica ao
     lado do vídeo."""
     rel = os.path.relpath(video, BASE)
+    if rel.startswith(".."):
+        # pasta importada (fora do acervo): a transcrição fica nos dados da marca, nunca na pasta
+        # de origem, que só é apontada
+        return caminhos.dados("transcricoes", "externos", os.path.abspath(video).lstrip(os.sep)) \
+            .rsplit(".", 1)[0] + ext
     if rel.split(os.sep)[0] == "_posts":
         return os.path.join(BASE, "transcricoes", os.path.splitext(rel)[0] + ext)
     return os.path.splitext(video)[0] + ext
@@ -197,6 +203,8 @@ def gravar(video: str, res: dict, opcoes: dict) -> None:
     srt = raiz_srt + ".srt"
     if os.path.exists(srt) and opcoes.get("backup", True):
         rel = os.path.relpath(srt, BASE)
+        if rel.startswith(".."):
+            rel = os.path.abspath(srt).lstrip(os.sep)
         destino = os.path.join(ANTIGOS, rel)
         os.makedirs(os.path.dirname(destino), exist_ok=True)
         shutil.copy2(srt, destino)

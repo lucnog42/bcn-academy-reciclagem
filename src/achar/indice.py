@@ -106,27 +106,27 @@ def _linhas_cortes() -> list[tuple]:
 
 
 def _linhas_pasta(f: dict) -> list[tuple]:
+    """Uma pasta apontada (importada ou do acervo.toml): o texto é o caminho (pastas e nome do
+    arquivo) e, nos vídeos já transcritos, também o que é falado, em trechos."""
+    from acervo import fontes as F
     raiz = os.path.expanduser(f.get("raiz") or "")
-    if not raiz or not os.path.isdir(raiz):
-        return []
-    ignorar = [x.lower() for x in f.get("ignorar") or []]
     linhas = []
-    for r, dirs, arqs in os.walk(raiz):
-        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and not any(i in d.lower() for i in ignorar))
-        rel_dir = os.path.relpath(r, raiz)
-        for a in sorted(arqs):
-            ext = os.path.splitext(a)[1].lower()
-            tipo = "video" if ext in VIDEO else "imagem" if ext in IMAGEM else None
-            if not tipo or a.startswith("."):
-                continue
-            texto = _limpar(f"{rel_dir} {os.path.splitext(a)[0]}")
-            ano = re.search(r"(20\d\d)", rel_dir + a)
-            linhas.append((texto, f["id"], os.path.join(r, a), tipo, 0.0, 0.0, rel_dir, "", ano.group(1) if ano else ""))
+    for arq, tipo in F.arquivos({**f, "raiz": raiz}):
+        rel_dir = os.path.relpath(os.path.dirname(arq), raiz)
+        contexto = _limpar(f"{f.get('nome') or ''} {rel_dir} {os.path.splitext(os.path.basename(arq))[0]}")
+        ano = re.search(r"(20\d\d)", rel_dir + os.path.basename(arq))
+        ano = ano.group(1) if ano else ""
+        trechos = _trechos_de_video(arq) if tipo == "video" else []
+        if not trechos:
+            linhas.append((contexto, f["id"], arq, tipo, 0.0, 0.0, rel_dir, "", ano))
+        for a, b, t in trechos:
+            linhas.append((f"{t} {contexto}", f["id"], arq, tipo, a, b, rel_dir, "", ano))
     return linhas
 
 
 def fontes() -> list[dict]:
-    return [f for f in config.carregar().get("fontes") or [] if f.get("ativo", True)]
+    """As fontes de MATERIAL ativas (as de referência de estilo nunca entram na busca de b-roll)."""
+    return [f for f in config.carregar().get("fontes") or [] if f.get("ativo", True) and f.get("tipo") != "referencias"]
 
 
 def indexar(so: str | None = None, db: str | None = None) -> dict[str, int]:

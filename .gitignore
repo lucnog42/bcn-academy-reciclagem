@@ -22,3 +22,6 @@ _reciclagem/
 .env
 *.key
 *token*.json
+
+# executável copiado para app/ quando o build fica fora do disco do projeto
+app/ng3-painel

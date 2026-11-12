@@ -77,12 +77,14 @@ def carregar(recarregar: bool = False) -> dict:
     pub = dict(ac.get("publicado") or {})
     # NG3_ACERVO (ou --acervo no app) troca a pasta do acervo sem mexer na config
     raiz_ac = os.path.expanduser(os.environ.get("NG3_ACERVO") or pub.get("raiz") or "")
+    if not raiz_ac:      # cliente sem acervo publicado: uma pasta vazia nos dados dele
+        raiz_ac = caminhos.dados("acervo")
     pub["raiz"] = raiz_ac
     for k in ("posts", "cortes", "transcricoes"):
         if pub.get(k):
             pub[k] = caminhos.resolver(pub[k], raiz_ac)
     cfg["acervo"] = pub
-    cfg["fontes"] = ac.get("fontes") or []
+    cfg["fontes"] = _fontes(ac.get("fontes") or [])
     mont = _mesclar(cfg.get("montagem") or {}, (marca.get("identidade") or {}).get("montagem") or {})
     for k in ("logo", "aberturas", "endings", "ending_padrao", "musicas", "modelo_fcproj"):
         if mont.get(k):
@@ -110,8 +112,36 @@ def carregar(recarregar: bool = False) -> dict:
         if x.get("id"):
             mods[x["id"]] = x
     cfg["modelos_prompt"] = list(mods.values())
+    # formatos de roteiro: os do produto + os da marca
+    cfg["roteiros"] = _mesclar(cfg.get("roteiros") or {}, marca.get("roteiros") or {})
     _CACHE = cfg
     return cfg
+
+
+def fontes_importadas_json() -> str:
+    """As pastas que você apontou na aba Importar (desta máquina): dados/marcas/<marca>/fontes.json."""
+    return caminhos.dados("fontes.json")
+
+
+def _fontes(da_config: list[dict]) -> list[dict]:
+    """As fontes do acervo.toml + as importadas pelo painel; `estado` liga/desliga qualquer uma."""
+    import json
+    try:
+        with open(fontes_importadas_json(), encoding="utf-8") as fh:
+            imp = json.load(fh)
+    except (OSError, ValueError):
+        imp = {}
+    estado = imp.get("estado") or {}
+    out = []
+    for f in [*({**x, "origem": "config"} for x in da_config),
+              *({**x, "origem": "importada"} for x in imp.get("fontes") or [])]:
+        f = dict(f)
+        if f.get("raiz"):
+            f["raiz"] = os.path.expanduser(f["raiz"])
+        if f["id"] in estado and "ativo" in estado[f["id"]]:
+            f["ativo"] = bool(estado[f["id"]]["ativo"])
+        out.append(f)
+    return out
 
 
 def descricao_marca() -> str:
@@ -158,9 +188,20 @@ def _local() -> dict:
     return _ler(local_toml())
 
 
+def _local_marca() -> dict:
+    """`[marcas.<marca ativa>]` do config/local.toml: chaves e IA só deste cliente."""
+    return ((_local().get("marcas") or {}).get(caminhos.marca())) or {}
+
+
+def _secao(nome: str, escopo: str) -> str:
+    """"ia"/"segredos" do cliente ativo (`marcas.<m>.<nome>`) ou gerais (`<nome>`)."""
+    return f"marcas.{caminhos.marca()}.{nome}" if escopo == "marca" else nome
+
+
 def ia() -> dict:
-    """O provedor escolhido, já com base_url e modelo resolvidos (sem a chave)."""
-    escolha = _local().get("ia") or {}
+    """O provedor escolhido, já com base_url e modelo resolvidos (sem a chave). O do cliente,
+    se ele tiver escolhido um; senão o geral."""
+    escolha = _local_marca().get("ia") or _local().get("ia") or {}
     pid = escolha.get("provedor") or "claude"
     if pid not in PROVEDORES:
         pid = "claude"
@@ -172,13 +213,16 @@ def ia() -> dict:
     if pid == "claude" and not p["modelo"]:
         p["modelo"] = carregar()["claude"]["modelo"]
     p["base_url"] = p["base_url"].rstrip("/")
+    p["escopo"] = "marca" if _local_marca().get("ia") else "geral"
     return p
 
 
 def chave(pid: str | None = None) -> str | None:
-    """A chave do provedor: variável de ambiente ou `[segredos]` do config.local.toml.
-    Nunca é devolvida pela API do app."""
+    """A chave do provedor: a do cliente ativo (`[marcas.<m>.segredos]`), senão a variável de
+    ambiente, senão a geral (`[segredos]`). Nunca é devolvida pela API do app."""
     p = _def_chave(pid)
+    if p["segredo"] and (_local_marca().get("segredos") or {}).get(p["segredo"]):
+        return _local_marca()["segredos"][p["segredo"]]
     if p["env"] and os.environ.get(p["env"]):
         return os.environ[p["env"]]
     if not p["segredo"]:
@@ -191,11 +235,13 @@ def chave_claude() -> str | None:
 
 
 def origem_chave(pid: str | None = None) -> str:
-    """De onde vem a chave: "ambiente", "arquivo" ou "" (nenhuma)."""
+    """De onde vem a chave: "cliente", "ambiente", "geral" ou "" (nenhuma)."""
     p = _def_chave(pid)
+    if p["segredo"] and (_local_marca().get("segredos") or {}).get(p["segredo"]):
+        return "cliente"
     if p["env"] and os.environ.get(p["env"]):
         return "ambiente"
-    return "arquivo" if p["segredo"] and (_local().get("segredos") or {}).get(p["segredo"]) else ""
+    return "geral" if p["segredo"] and (_local().get("segredos") or {}).get(p["segredo"]) else ""
 
 
 def _editar_local(secao: str, valores: dict[str, str | None]) -> None:
@@ -203,7 +249,10 @@ def _editar_local(secao: str, valores: dict[str, str | None]) -> None:
     (None tira a linha). O resto do arquivo fica como está; legível só pelo usuário."""
     import re
     caminho = local_toml()
-    texto = open(caminho, encoding="utf-8").read() if os.path.exists(caminho) else ""
+    texto = ""
+    if os.path.exists(caminho):
+        with open(caminho, encoding="utf-8") as fh:
+            texto = fh.read()
     linhas = texto.splitlines()
     # limites da seção
     ini = next((k for k, l in enumerate(linhas) if l.strip() == f"[{secao}]"), None)
@@ -231,8 +280,8 @@ def _editar_local(secao: str, valores: dict[str, str | None]) -> None:
     _CACHE = None
 
 
-def salvar_chave(valor: str | None, pid: str | None = None) -> None:
-    """Grava (ou tira, com vazio) a chave do provedor em `[segredos]`."""
+def salvar_chave(valor: str | None, pid: str | None = None, escopo: str = "marca") -> None:
+    """Grava (ou tira, com vazio) a chave do provedor: só para o cliente ativo (padrão) ou geral."""
     import re
     p = _def_chave(pid)
     if not p["segredo"]:
@@ -240,17 +289,23 @@ def salvar_chave(valor: str | None, pid: str | None = None) -> None:
     valor = (valor or "").strip()
     if valor and not re.fullmatch(r"[A-Za-z0-9_\-.:]{16,400}", valor):
         raise ValueError("isso não parece uma chave de API")
-    _editar_local("segredos", {p["segredo"]: valor or None})
+    _editar_local(_secao("segredos", escopo), {p["segredo"]: valor or None})
 
 
-def salvar_ia(pid: str, modelo: str = "", base_url: str = "") -> dict:
-    """Escolhe o provedor (e o modelo / endereço) em `[ia]` do config.local.toml."""
+def salvar_ia(pid: str, modelo: str = "", base_url: str = "", escopo: str = "marca") -> dict:
+    """Escolhe o provedor (e o modelo / endereço): só para o cliente ativo (padrão) ou geral."""
     if pid not in PROVEDORES:
         raise ValueError(f"provedor desconhecido: {pid}")
     if base_url and not re.match(r"^https?://", base_url.strip()):
         raise ValueError("o endereço precisa começar com http:// ou https://")
-    _editar_local("ia", {"provedor": pid, "modelo": modelo.strip() or None,
+    _editar_local(_secao("ia", escopo), {"provedor": pid, "modelo": modelo.strip() or None,
                          "base_url": base_url.strip() or None})
+    return ia()
+
+
+def usar_ia_geral() -> dict:
+    """O cliente ativo deixa de ter IA própria e volta a usar a escolha geral."""
+    _editar_local(_secao("ia", "marca"), {"provedor": None, "modelo": None, "base_url": None})
     return ia()
 
 

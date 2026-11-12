@@ -11,6 +11,7 @@ pub fn preview(s: &App, t: Tema, tira_w: Option<f32>) -> Option<El> {
     let corpo = match &p.alvo {
         Alvo::Post(n) => corpo_post(s, n, t, tira_w)?,
         Alvo::Corte(a) => corpo_corte(s, a, t, tira_w)?,
+        Alvo::Roteiro(p) => corpo_roteiro(s, p, t, tira_w),
     };
     let folha = col().key("folha").w_full().max_w(1080.0).gap(14.0).padding(18.0).radius(14.0)
         .fill(t.card).border(1.0, t.linha)
@@ -112,6 +113,74 @@ fn corpo_corte(s: &App, arq: &str, t: Tema, tira_w: Option<f32>) -> Option<El> {
         .child(painel_motion(s, t));
     if !k.fala.is_empty() { c = c.child(texto_bloco("o que é dito", &k.fala, t)); }
     Some(c)
+}
+
+/// O projeto de um roteiro aprovado: os vídeos de onde vêm as falas e um momento por parte.
+fn corpo_roteiro(s: &App, pasta: &str, t: Tema, tira_w: Option<f32>) -> El {
+    let e = s.motion.as_ref().and_then(|m| m.estado.as_ref());
+    let titulo = s.x.aberto.as_ref().filter(|r| r.pasta.as_deref() == Some(pasta)).map(|r| r.titulo.clone())
+        .unwrap_or_else(|| pasta.rsplit('/').next().unwrap_or(pasta).to_string());
+    let mut videos: Vec<String> = vec![];
+    for m in e.map(|e| e.sugestoes.as_slice()).unwrap_or(&[]) {
+        if !videos.contains(&m.video) { videos.push(m.video.clone()); }
+    }
+    let projeto = e.map(|e| e.projeto.clone()).unwrap_or_default();
+    let p2 = pasta.to_string();
+    let mut acoes = row().w_full().gap(8.0)
+        .child(text("roteiro aprovado · o primeiro corte já está no projeto (falas + b-roll do acervo)").font(tema::PEQ).color(t.dim))
+        .child(spacer())
+        .child(botao("r-pasta", "abrir pasta", t.txt, false, t, move |s: &mut App| s.abrir_pasta(&p2)));
+    if !projeto.is_empty() {
+        acoes = acoes.child(botao("r-abrir", "abrir projeto (.fcproj)", t.acento, false, t, move |s: &mut App| s.abrir_projeto(&projeto)));
+    }
+    acoes = acoes.child(botao("r-montar", "atualizar o projeto (b-roll + motion)", t.alerta, false, t, |s: &mut App| s.inserir_no_projeto()));
+    col().w_full().gap(14.0)
+        .child(cabecalho(&titulo, format!("{} · {} parte(s)", pasta, e.map_or(0, |e| e.sugestoes.len())), t))
+        .child(acoes)
+        .child(if videos.is_empty() { el() } else { painel_video(s, videos, t, tira_w) })
+        .child(painel_motion(s, t))
+}
+
+/// Motion de um momento: gerar com HyperFrames (a IA escreve a composição, o HyperFrames renderiza
+/// um MOV transparente) ou reaproveitar um motion que o cliente já tem.
+fn motion_opcoes(s: &App, m: &crate::app::MotionUi, mo: &crate::dados::Momento, t: Tema) -> El {
+    if mo.status == "descartado" || mo.formato == "acervo" || mo.formato == "video" && mo.video_ia.is_some() { return el(); }
+    let (i1, i2, i3) = (mo.id.clone(), mo.id.clone(), mo.id.clone());
+    let tem_comp = mo.motion_hf.as_ref().is_some_and(|h| !h.composicao.is_empty());
+    let mut r = row().w_full().gap(6.0).center_y()
+        .child(text("MOTION").font(tema::MINI).color(t.dim))
+        .child(match mo.motion_hf.as_ref() {
+            Some(h) if !h.renderizado_em.is_empty() => text(format!("HyperFrames · renderizado em {}", h.renderizado_em.replace('T', " ")))
+                .font(tema::PEQ).color(t.acento),
+            Some(_) => text("composição escrita, falta renderizar").font(tema::PEQ).color(t.alerta),
+            None => text("feito em HTML pelo HyperFrames, com fundo transparente").font(tema::PEQ).color(t.dim),
+        })
+        .child(spacer())
+        .child(botao(format!("hf-bib-{}", mo.id), "usar um motion que já existe", t.txt, m.biblioteca_para.as_deref() == Some(&mo.id), t,
+                     move |s: &mut App| s.biblioteca_abrir(&i1)));
+    if tem_comp {
+        r = r.child(botao(format!("hf-ren-{}", mo.id), "só renderizar de novo", t.dim, false, t, move |s: &mut App| s.motion_hf(&i2, true)));
+    }
+    r = r.child(botao(format!("hf-ger-{}", mo.id), if tem_comp { "escrever e renderizar de novo" } else { "gerar motion (HyperFrames)" },
+                      t.acento, false, t, move |s: &mut App| s.motion_hf(&i3, false)));
+    let mut c = col().w_full().gap(6.0).child(r);
+    if m.biblioteca_para.as_deref() == Some(&mo.id) {
+        let lista: Vec<_> = s.x.biblioteca.iter().filter(|b| b.id != mo.id).take(12).collect();
+        if lista.is_empty() {
+            c = c.child(text("este cliente ainda não tem motions prontos: gere um com o HyperFrames").font(tema::PEQ).color(t.dim));
+        }
+        for b in lista {
+            let (id, origem) = (mo.id.clone(), b.id.clone());
+            c = c.child(row().key(format!("bib-{}-{}", mo.id, b.id)).w_full().gap(8.0).padding(6.0).radius(6.0).fill(t.card2)
+                .border(1.0, t.linha).cursor(Cursor::Pointer).hover(t.linha_forte.alpha(0.2))
+                .child(etiqueta(if b.tipo.is_empty() { "motion".to_string() } else { b.tipo.clone() }, t.rep))
+                .child(text(if b.texto.is_empty() { b.id.clone() } else { b.texto.clone() }).font(tema::PEQ).color(t.txt).truncate().grow(1.0).min_w(0.0))
+                .child(text(format!("{:.1} s · {}", b.dur, b.item.replace("__", "/"))).font(tema::MINI).color(t.dim).truncate())
+                .child(text("usar").font(tema::MINI).color(t.acento))
+                .on_press(move |s: &mut App| s.motion_reusar(&id, &origem)));
+        }
+    }
+    c
 }
 
 /// Quadro grande + tira de quadros (clique para escolher) + legenda no tempo + tocar no mpv.
@@ -218,9 +287,10 @@ fn cor_status(status: &str, t: Tema) -> rune::Color {
     }
 }
 
-fn rotulo_status(status: &str) -> &'static str {
+fn rotulo_status(status: &str, formato: &str) -> &'static str {
     match status {
-        "aprovado" => "na fila do Claude",
+        "aprovado" if formato == "acervo" => "b-roll do acervo ✓",
+        "aprovado" => "motion aprovado",
         "pronto" => "pronto ✓",
         "descartado" => "descartado",
         _ => "sugerido",
@@ -255,9 +325,10 @@ fn painel_motion(s: &App, t: Tema) -> El {
         .child(botao("mo-sugerir", if m.sugerindo { "pedindo à IA…" } else { "sugerir momentos" },
                      t.acento, m.sugerindo, t, |s: &mut App| { if !s.motion.as_ref().is_some_and(|m| m.sugerindo) { s.motion_sugerir() } })));
 
-    c = c.child(text("Cada momento vira uma de duas coisas: «fazer como motion» = gráfico por cima do vídeo, feito pelo Claude \
-        (nome, número, frase, lugar, chamada; o falante continua aparecendo) · «gerar vídeo com IA» = uma cena nova (b-roll) do \
-        OpenRouter, quando a fala cita algo que não aparece na imagem. ★ = o que a IA sugere.")
+    c = c.child(text("Cada momento vira uma de duas coisas: «motion» = gráfico por cima do vídeo, em HTML renderizado \
+        pelo HyperFrames com fundo transparente (nome, número, frase, lugar, chamada; o falante continua aparecendo) · «b-roll do \
+        acervo» = imagens que você já tem · «gerar vídeo com IA» = uma cena nova do OpenRouter, quando nada no acervo serve. \
+        ★ = o que a IA sugere.")
         .font(tema::PEQ.lh(16.0)).color(t.dim).wrap());
     if let Some(e) = e {
         c = c.child(if e.projeto.is_empty() {
@@ -349,7 +420,7 @@ fn painel_motion(s: &App, t: Tema) -> El {
                 .on_drop_files(move |s: &mut App, arquivos, _| s.motion_ref_arquivos(&id_drop, arquivos))
                 .accepts_extensions(&["png", "jpg", "jpeg", "webp"])
                 .child(row().w_full().gap(6.0).center_y().flex_wrap()
-                    .child(etiqueta(rotulo_status(&mo.status), cor))
+                    .child(etiqueta(rotulo_status(&mo.status, &mo.formato), cor))
                     .child(etiqueta(mo.tipo.clone(), t.rep))
                     .child(if editavel && !mo.formato.is_empty() {
                         etiqueta(match mo.formato.as_str() { "video" => "IA sugere: vídeo com IA", "acervo" => "b-roll do acervo", _ => "IA sugere: motion" }, t.alerta)
@@ -367,13 +438,14 @@ fn painel_motion(s: &App, t: Tema) -> El {
                 .child(refs_el)
                 .child(if mo.status == "descartado" || mo.status == "pronto" && mo.briefing.is_empty() { el() } else { briefing_motion(s, m, mo, t, &k) })
                 .child(if mo.status == "descartado" { el() } else { broll_acervo(s, m, mo, t) })
+                .child(motion_opcoes(s, m, mo, t))
                 .child(estado_video(mo, t))
                 .child(if form_aberto { form_video(s, mo, t, &k) } else { el() })
                 .child(acoes));
         }
         if e.sugestoes.iter().any(|m| m.status == "aprovado") {
-            c = c.child(text("Os \"fazer como motion\" estão na fila da marca (dados/marcas/<marca>/motion/fila.json). Peça no Claude \
-                \"faz os motions da fila\"; exporte cada filme como MOV em motion/prontos/<id>.mov e rode o plugin Inserir motion.")
+            c = c.child(text("Motions aprovados: em cada um, «gerar motion (HyperFrames)» escreve e renderiza o MOV; depois «atualizar o \
+                projeto» (ou o plugin Inserir motion) põe tudo na faixa Motion. O Claude também pode fazer os da fila (motion/fila.json).")
                 .font(tema::PEQ).color(t.dim).wrap());
         }
     }

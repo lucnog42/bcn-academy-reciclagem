@@ -421,7 +421,8 @@ def novo_momento(pasta: str, video: str, ini: float, fim: float | None = None,
              "referencias": [], "status": "sugerido"}
         d.setdefault("itens", []).append(s)
         vs = videos_da_pasta(pasta)
-        d["itens"].sort(key=lambda x: (vs.index(x["video"]) if x["video"] in vs else 99, x["ini"]))
+        # num projeto de roteiro, a ordem é a das partes; nos outros, a dos vídeos e do tempo
+        d["itens"].sort(key=lambda x: (x.get("parte", 999), vs.index(x["video"]) if x["video"] in vs else 99, x["ini"]))
         gravar_sugestoes(pasta, d)
         return s
 

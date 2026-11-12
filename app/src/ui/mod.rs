@@ -2,9 +2,11 @@
 
 mod comum;
 mod grade;
+mod importar;
 mod lista;
 mod plugins;
 mod preview;
+mod roteiros;
 pub mod tema;
 pub use grade::GAP;
 
@@ -31,6 +33,8 @@ pub fn view(s: &App, cx: &mut Cx<App>) -> El {
                     if c != s.colunas { s.colunas = c; s.versao += 1; }
                 }),
             Aba::Recomendados => lista::recomendados(s),
+            Aba::Roteiros => roteiros::aba(s, t, &k),
+            Aba::Importar => importar::aba(s, t, &k),
             Aba::Plugins => plugins::aba(s, t, cx),
             Aba::Config => col().key("aba-config").w_full().grow(1.0).min_h(0.0).padding(24.0)
                 .scroll(ScrollSpec { stick_bottom: false }).fill(t.bg)
@@ -52,6 +56,9 @@ pub fn view(s: &App, cx: &mut Cx<App>) -> El {
     if s.chave_aberta {
         camadas.push(painel_chave(s, t, &k));
     }
+    if s.x.clientes_aberto {
+        camadas.push(menu_clientes(s, t, &k));
+    }
     if let Some(a) = &s.aviso {
         camadas.push(toast(a, t));
     }
@@ -72,6 +79,8 @@ fn topo(s: &App, t: Tema, k: &rune_kit::Kit) -> El {
             Aba::Posts => s.posts.len(),
             Aba::Cortes => s.cortes.len(),
             Aba::Recomendados => 0,
+            Aba::Roteiros => s.x.roteiros.len(),
+            Aba::Importar => s.x.fontes.iter().filter(|f| f.origem == "importada").count(),
             Aba::Plugins => s.plugins.quantos(),
             Aba::Config => 0,
         };
@@ -85,8 +94,12 @@ fn topo(s: &App, t: Tema, k: &rune_kit::Kit) -> El {
     let led = if s.ponte.is_some() { t.acento } else { t.alerta };
     let estado = if s.ponte.is_some() { "motor Python ligado" } else { "sem motor Python" };
     let linha1 = row().w_full().h(36.0).gap(14.0).center_y()
-        .child(text(if s.nome_marca.is_empty() { "Video Automation NG3".to_string() } else { s.nome_marca.clone() })
-            .font(tema::TITULO).color(t.txt))
+        .child(row().key("cliente").h(30.0).px(8.0).gap(6.0).center_y().radius(7.0)
+            .fill(if s.x.clientes_aberto { t.acento.alpha(0.12) } else { rune::Color::TRANSPARENT })
+            .hover(t.linha_forte.alpha(0.2)).cursor(Cursor::Pointer)
+            .child(text(s.nome_cliente()).font(tema::TITULO).color(t.txt))
+            .child(text("▾").font(tema::PEQ).color(t.dim))
+            .on_press(|s: &mut App| s.x.clientes_aberto = !s.x.clientes_aberto))
         .child(text(format!("{} posts · {} cortes", s.posts.len(), s.cortes.len())).font(tema::PEQ).color(t.dim))
         .child(abas)
         .child(spacer())
@@ -290,6 +303,42 @@ fn botao_claude(s: &App, t: Tema) -> El {
 
 /// A IA das sugestões: provedor (Claude, DeepSeek, OpenRouter, Ollama, outra), modelo,
 /// endereço e chave. Salvar grava em config.local.toml e testa.
+/// O seletor de cliente (canto esquerdo do topo): trocar reinicia o motor com o acervo, as chaves
+/// e o estado do outro cliente; "novo cliente" copia o molde.
+fn menu_clientes(s: &App, t: Tema, k: &rune_kit::Kit) -> El {
+    let x = &s.x;
+    let mut lista = col().w_full().gap(4.0);
+    for c in x.clientes.iter().filter(|c| !c.molde || c.slug == s.marca) {
+        let on = c.slug == s.marca;
+        let slug = c.slug.clone();
+        lista = lista.child(row().key(format!("cli-{}", c.slug)).w_full().h(34.0).px(10.0).gap(8.0).center_y().radius(7.0)
+            .fill(if on { t.acento.alpha(0.14) } else { rune::Color::TRANSPARENT })
+            .hover(t.linha_forte.alpha(0.2)).cursor(Cursor::Pointer)
+            .child(text(if on { "●" } else { "○" }).font(tema::PEQ).color(if on { t.acento } else { t.dim }))
+            .child(text(c.nome.clone()).font(tema::NORMAL_M).color(t.txt))
+            .child(spacer())
+            .child(text(c.slug.clone()).font(tema::MONO).color(t.dim))
+            .on_press(move |s: &mut App| { s.x.clientes_aberto = false; s.trocar_marca(&slug); }));
+    }
+    let painel = col().key("menu-clientes").w(420.0).gap(10.0).padding(14.0).radius(12.0).fill(t.card).border(1.0, t.linha_forte)
+        .child(text("CLIENTES").font(tema::MINI).color(t.dim))
+        .child(lista)
+        .child(el().w_full().h(1.0).fill(t.linha))
+        .child(text("NOVO CLIENTE").font(tema::MINI).color(t.dim))
+        .child(TextInput::new(&x.novo_cliente).placeholder("nome do cliente").on_edit(|s: &mut App| &mut s.x.novo_cliente)
+            .build(k).key("cli-nome").w_full())
+        .child(TextInput::new(&x.novo_cliente_acervo).placeholder("pasta do acervo publicado (opcional: vazio cria uma nova)")
+            .on_edit(|s: &mut App| &mut s.x.novo_cliente_acervo).build(k).key("cli-acervo").w_full())
+        .child(row().w_full().gap(8.0).center_y()
+            .child(text("Cada cliente tem o seu acervo, chaves de API, fontes, roteiros e motions.").font(tema::PEQ).color(t.dim)
+                .wrap().grow(1.0).min_w(0.0))
+            .child(botao("cli-criar", if x.criando_cliente { "criando…" } else { "criar e abrir" }, t.acento, x.criando_cliente, t,
+                         |s: &mut App| { if !s.x.criando_cliente { s.criar_cliente() } })));
+    col().key("camada-clientes").w_full().h_full().absolute(0.0, 0.0)
+        .on_press(|s: &mut App| s.x.clientes_aberto = false)
+        .child(row().w_full().padding(16.0).child(painel.mt(44.0).on_press(|_: &mut App| {})).child(spacer()))
+}
+
 fn painel_chave(s: &App, t: Tema, k: &rune_kit::Kit) -> El {
     let painel = conteudo_chaves(s, t, k).w(500.0);
     col().key("camada-chave").w_full().h_full().absolute(0.0, 0.0)
@@ -348,6 +397,19 @@ fn conteudo_chaves(s: &App, t: Tema, k: &rune_kit::Kit) -> El {
             .child(spacer())
             .child(if s.aba == Aba::Config { el() } else {
                 botao("chave-fechar", "fechar", t.dim, false, t, |s: &mut App| s.chave_aberta = false) }))
+        .child(row().w_full().gap(6.0).center_y()
+            .child(text("salvar para").font(tema::PEQ).color(t.dim))
+            .child(pastilha("esc-marca".into(), format!("só {}", s.nome_cliente()), s.x.chave_escopo == "marca", t,
+                            |s: &mut App| s.x.chave_escopo = "marca".into()))
+            .child(pastilha("esc-geral".into(), "todos os clientes (geral)".into(), s.x.chave_escopo == "geral", t,
+                            |s: &mut App| s.x.chave_escopo = "geral".into())))
+        .child(text(format!("A IA e as chaves de {} valem só para ele; quem não tem as suas usa as gerais. Agora: IA {} · chave {}.",
+                            s.nome_cliente(),
+                            if i.escopo_ia == "marca" { "própria do cliente" } else { "geral" },
+                            match i.origem.as_str() { "cliente" => "do cliente", "geral" => "geral", "ambiente" => "da variável de ambiente", _ => "nenhuma" }))
+            .font(tema::PEQ.lh(16.0)).color(t.dim).wrap())
+        .child(if i.escopo_ia == "marca" {
+            botao("ia-geral", "este cliente volta a usar a IA geral", t.dim, false, t, |s: &mut App| s.usar_ia_geral()) } else { el() })
         .child(text("Sugestões de motion").font(tema::NORMAL_M).color(t.txt))
         .child(text(situacao).font(tema::PEQ.lh(16.0)).color(if erro { t.erro } else { t.dim }).wrap())
         .child(rotulo("PROVEDOR"))

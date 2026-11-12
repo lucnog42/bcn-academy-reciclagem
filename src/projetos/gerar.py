@@ -231,6 +231,46 @@ def gerar_com_modelo(nome: str, pasta: str, videos: list[str], dados_extra: dict
     return True, ""
 
 
+def gerar_de_entradas(nome: str, pasta: str, entradas: list[dict], titulo: str, subtitulo: str,
+                      logo: str | None = None, musica: str | None = None, ending: str | None = None) -> tuple[bool, str]:
+    """Projeto montado a partir de pedaços em ordem, o mesmo vídeo podendo voltar mais de uma vez
+    (um roteiro). Cada entrada: {video (absoluto), trechos [(ini, fim)], palavras [(a, b, t)]}."""
+    if not os.path.exists(MODELO):
+        return False, f"modelo base ausente: {MODELO}"
+    if not entradas:
+        return False, "roteiro vazio"
+    lista = []
+    for e in entradas:
+        dur = MF.seg(MF.probe(e["video"])["duration"])
+        trechos = [(max(0.0, a), min(dur, b)) for a, b in e.get("trechos") or [(0.0, dur)] if min(dur, b) > max(0.0, a)]
+        lista.append({"video": e["video"], "trechos": trechos or [(0.0, dur)], "palavras": e.get("palavras") or [],
+                      "duracao": dur})
+    fps = fps_do_video(lista[0]["video"])
+    leg = [(MF.ticks(a), MF.ticks(b - a), t) for a, b, t in
+           legendas.cartelas(MF.palavras_na_timeline(lista), fps=fps)]
+    dados = {"nome": nome, "videos": [{"video": v["video"], "trechos": v["trechos"]} for v in lista],
+             "ending": ending, "logo": logo, "titulo": titulo, "subtitulo": subtitulo, "legendas": leg,
+             "legendas_na_timeline": True, "musica": musica}
+    with open(MODELO, encoding="utf-8") as fh:
+        template = json.load(fh)
+    projeto = MF.construir(template, dados)
+    os.makedirs(pasta, exist_ok=True)
+    alvo = os.path.join(pasta, f"{nome}.fcproj")
+    copia = fcproj.guardar_copia(alvo) if os.path.exists(alvo) else None
+    MF.escrever(projeto, alvo)
+    r = subprocess.run([FILMCRAFT, "--project", alvo, "inspect"], capture_output=True, text=True, timeout=120)
+    if r.returncode != 0:
+        if copia:
+            shutil.copy2(copia, alvo)
+        else:
+            os.unlink(alvo)
+        return False, f"projeto inválido: {(r.stderr or r.stdout).strip()[:220]}"
+    with open(os.path.splitext(alvo)[0] + ".trechos.json", "w", encoding="utf-8") as fh:
+        json.dump({"videos": [{"video": os.path.relpath(v["video"], BASE) if v["video"].startswith(BASE) else v["video"],
+                               "trechos": v["trechos"], "duracao": v["duracao"]} for v in lista]}, fh, ensure_ascii=False)
+    return True, ""
+
+
 def trechos_do_silencecut(video: str) -> list[tuple] | None:
     """Trechos de fala que o plugin Cortar silêncio gravou em `<vídeo>.cuts.json`:
     (início, fim, início da imagem, fim da imagem) — a imagem difere do som no J/L."""

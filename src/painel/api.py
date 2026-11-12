@@ -24,6 +24,7 @@ import datetime as dt
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -105,7 +106,144 @@ def m_ping(_):
     cfg = config.carregar()
     return {"versao": VERSAO, "base": BASE, "raiz": RAIZ, "plugins": PLUGINS,
             "marca": caminhos.marca(), "marcas": caminhos.marcas(), "nome_marca": cfg["marca"].get("nome", ""),
+            "clientes": __import__("nucleo.marcas", fromlist=["listar"]).listar(),
             "pilares": list(cfg["pilares"].get("ordem") or []), **_info_chave()}
+
+
+def m_marcas(_):
+    from nucleo import marcas
+    return marcas.listar()
+
+
+def m_criar_marca(d):
+    """Cliente novo a partir do molde; já fica ativo (o app reinicia o motor)."""
+    from nucleo import marcas
+    m = marcas.criar(str(d.get("nome") or ""), str(d.get("acervo") or ""), str(d.get("slug") or ""))
+    with open(caminhos.raiz("config", "marca-ativa"), "w", encoding="utf-8") as fh:
+        fh.write(m["slug"] + "\n")
+    return {**m, "marca": m["slug"]}
+
+
+def m_fontes(_):
+    from acervo import fontes
+    return {"fontes": fontes.listar(), "tipos": fontes.TIPOS}
+
+
+def m_fonte_adicionar(d):
+    """Aponta uma pasta (sem copiar) como fonte do cliente ativo e já indexa."""
+    from acervo import fontes
+    from achar import indice
+    f = fontes.adicionar(str(d.get("raiz") or ""), str(d.get("tipo") or ""), str(d.get("nome") or ""))
+    n = indice.indexar(f["id"]).get(f["id"], 0)
+    return {**f, "indexados": n}
+
+
+def m_fonte_remover(d):
+    from acervo import fontes
+    fontes.remover(str(d["id"]))
+    return {"id": d["id"]}
+
+
+def m_fonte_ativar(d):
+    from acervo import fontes
+    fontes.ativar(str(d["id"]), bool(d.get("ativo")))
+    return {"id": d["id"]}
+
+
+def m_fonte_contar(d):
+    from acervo import fontes
+    return fontes.contar(str(d["id"]))
+
+
+def m_fonte_indexar(d):
+    from achar import indice
+    return indice.indexar(d.get("id") or None)
+
+
+def m_fonte_transcrever(d):
+    """Devolve o comando de transcrição; o app o põe na fila de tarefas (processo)."""
+    from acervo import fontes
+    return {"cmd": fontes.comando_transcrever(str(d["id"]))}
+
+
+# ------------------------------------------------------------------ roteiros
+def m_roteiros(_):
+    from plano import falas, roteiros
+    return {"roteiros": roteiros.listar(), "ideias": roteiros.ler_ideias(), "banco": falas.total(),
+            "formatos": [{"id": k, "nome": v.get("nome", k), "descricao": v.get("descricao", ""),
+                          "duracao": v.get("duracao", 45)} for k, v in roteiros.formatos().items()],
+            "funcoes": [{"id": k, "nome": v.get("nome", k), "descricao": v.get("descricao", ""),
+                         "pode_gerar": bool(v.get("pode_gerar"))} for k, v in roteiros.funcoes().items()]}
+
+
+def m_roteiro_ideias(d):
+    from plano import roteiros
+    return roteiros.ideias(str(d.get("tema") or ""), int(d.get("n") or 4))
+
+
+def m_roteiro_escrever(d):
+    from plano import roteiros
+    return roteiros.escrever(str(d.get("tema") or ""), str(d.get("formato") or ""), int(d.get("duracao") or 0),
+                             str(d.get("ideia") or ""))
+
+
+def m_roteiro(d):
+    from plano import roteiros
+    return roteiros.ler(str(d["id"]))
+
+
+def m_roteiro_editar(d):
+    from plano import roteiros
+    return roteiros.editar(str(d["id"]), str(d["acao"]), int(d["i"]), d.get("valor"))
+
+
+def m_roteiro_excluir(d):
+    from plano import roteiros
+    roteiros.excluir(str(d["id"]))
+    return {"id": d["id"]}
+
+
+def m_roteiro_aprovar(d):
+    """Cria o projeto com o primeiro corte (só material do acervo) e os momentos de cada parte."""
+    from plano import roteiros
+    r = roteiros.aprovar(str(d["id"]))
+    emitir({"evento": "posts_atualizados", "lista": "roteiros"})
+    return r
+
+
+def m_roteiro_exportar(d):
+    from plano import roteiros
+    arq = roteiros.exportar_md(str(d["id"]))
+    with open(arq, encoding="utf-8") as fh:
+        return {"arquivo": arq, "texto": fh.read()}
+
+
+def m_falas_indexar(_):
+    from plano import falas
+    return {"frases": falas.indexar()}
+
+
+# ------------------------------------------------------------------ motion (HyperFrames)
+def m_motion_hf(d):
+    """Escreve a composição e renderiza o MOV do momento com o HyperFrames, como tarefa."""
+    from plano import momentos
+    _abs(d["pasta"])
+    if not shutil.which("npx"):
+        raise ValueError("o HyperFrames precisa do Node 22+ (npx) nesta máquina")
+    acao = "renderizar" if d.get("so_render") else "gerar"
+    cmd = [sys.executable, os.path.join(SRC, "criar", "motion_hf.py"), acao, d["pasta"], d["id"]]
+    return _iniciar(cmd, "motion", lambda ok: emitir({"evento": "motion_atualizado", "pasta": d["pasta"]}))
+
+
+def m_motion_biblioteca(_):
+    from criar import motion_hf
+    return motion_hf.biblioteca()
+
+
+def m_motion_reusar(d):
+    from criar import motion_hf
+    _abs(d["pasta"])
+    return motion_hf.reusar(d["pasta"], d["id"], str(d["origem"]))
 
 
 def m_trocar_marca(d):
@@ -122,14 +260,18 @@ def m_chave(d):
     """Escolhe a IA (provedor, modelo, endereço) e/ou grava a chave dela ("" tira), e confere
     se funciona. A chave nunca volta."""
     from nucleo import ia
+    # escopo: "marca" (só o cliente ativo, o padrão) ou "geral" (todos os clientes sem chave própria)
+    escopo = "geral" if d.get("escopo") == "geral" else "marca"
     if d.get("so_chave"):
         # só guarda uma chave (ex.: a do vídeo), sem trocar a IA das sugestões
-        config.salvar_chave(d.get("chave") or "", d["so_chave"])
+        config.salvar_chave(d.get("chave") or "", d["so_chave"], escopo)
         return {**ia.testar(), "so_chave": d["so_chave"]}
-    if d.get("provedor"):
-        config.salvar_ia(d["provedor"], d.get("modelo") or "", d.get("base_url") or "")
+    if d.get("ia_geral"):
+        config.usar_ia_geral()
+    elif d.get("provedor"):
+        config.salvar_ia(d["provedor"], d.get("modelo") or "", d.get("base_url") or "", escopo)
     if "chave" in d and (d.get("chave") or d.get("remover")):
-        config.salvar_chave(d.get("chave") or "", d.get("provedor"))
+        config.salvar_chave(d.get("chave") or "", d.get("provedor"), escopo)
     return ia.testar()
 
 
