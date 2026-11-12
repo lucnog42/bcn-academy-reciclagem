@@ -1,0 +1,27 @@
+# Pilares (temas) da marca e as palavras que os revelam na legenda e na fala.
+# peso: 3 = específico do tema, 2 = contextual, 1 = fraco.
+[pilares]
+ordem = ["DEPOIMENTO", "PRODUTO", "BASTIDOR"]
+fallback = "OUTROS"
+evidencia_minima = 2.5
+
+[pilares.angulo]
+"DEPOIMENTO" = "prova social — cliente conta"
+"PRODUTO" = "o produto de perto, com o preço ou a oferta do momento"
+"BASTIDOR" = "como é feito"
+"OUTROS" = "material de arquivo para completar o feed"
+
+[termos]
+"DEPOIMENTO" = { "depoimento" = 3, "recomendo" = 2, "melhor café" = 3 }
+"PRODUTO" = { "lançamento" = 3, "novo blend" = 3, "torra" = 2, "pacote" = 1.5 }
+"BASTIDOR" = { "bastidores" = 3, "fazenda" = 2.5, "colheita" = 3, "torrefação" = 3 }
+
+[local_pilar]
+
+[pasta]
+pistas = []
+
+[tema_pilar]
+
+[cortes]
+padrao = "DEPOIMENTO"

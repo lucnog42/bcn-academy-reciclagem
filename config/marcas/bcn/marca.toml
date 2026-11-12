@@ -1,0 +1,12 @@
+# A marca: quem é, para quem fala. É o que a IA recebe como contexto fixo.
+[marca]
+slug = "bcn"
+nome = "BCN Intercâmbio"
+instagram = "@bcn_academy"
+idioma = "pt-BR"
+descricao = "A BCN Intercâmbio leva jovens jogadores de futebol brasileiros para treinar em clubes e jogar torneios na Espanha (região de Barcelona)."
+publico = "jogadores de base e as famílias deles"
+formato_padrao = "vídeo vertical 9:16 para o Instagram"
+cores_texto = "vermelho, preto e branco (as cores dos uniformes)"
+# nunca gerar ou reestilizar pessoa real da marca (atletas são menores)
+pessoas_reais = "nunca gerar nem reestilizar: jogadores, treinadores e famílias só em foto/vídeo verdadeiro"

@@ -1,0 +1,1 @@
+{ "description": "Conversa/entrevista: corta só pausas longas, margens folgadas, J/L automático", "auto_threshold": true, "auto_offset_db": 10, "min_silence": 0.8, "min_clip": 0.25, "pad_before": 0.20, "pad_after": 0.30, "jl": "auto", "jl_amount": 0.35 }

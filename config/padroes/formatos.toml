@@ -1,0 +1,20 @@
+# Como uma imagem entra sobre a fala. `fase` = quando o sistema passa a montar sozinho.
+[formatos.broll]
+nome = "b-roll em tela cheia"
+fase = 1
+
+[formatos.motion]
+nome = "motion por cima (fundo transparente)"
+fase = 1
+
+[formatos.cartao]
+nome = "cartão ao lado do falante"
+fase = 2
+
+[formatos.grade]
+nome = "grade de fotos"
+fase = 2
+
+[formatos.fundo]
+nome = "fundo atrás da pessoa (recorte)"
+fase = 2

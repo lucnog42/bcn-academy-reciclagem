@@ -1,0 +1,1 @@
+{ "description": "Locução em estúdio (ruído baixo), só áudio", "threshold_db": -45, "min_silence": 0.35, "min_clip": 0.1, "pad_before": 0.08, "pad_after": 0.12 }

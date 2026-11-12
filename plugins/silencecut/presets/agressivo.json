@@ -1,0 +1,1 @@
+{ "description": "Ritmo de reels/shorts: corta até respirações curtas", "threshold_db": -35, "min_silence": 0.25, "min_clip": 0.15, "pad_before": 0.05, "pad_after": 0.08 }

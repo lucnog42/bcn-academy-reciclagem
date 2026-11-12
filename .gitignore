@@ -1,38 +1,20 @@
-# Mídia e projetos — nunca versionados (o acervo são ~15 GB)
-_posts/
-_Cortes/
-_audio/
-_endings/
-Exportados/
-transcricoes/
-_sem_metadata/
+# estado de cada marca (marcações, filas, índices, cache): fica só nesta máquina
+dados/
+# chaves e caminhos desta máquina
+config/local.toml
+.venv-asr/
+app/target/
+__pycache__/
+*.pyc
 
-# artefatos gerados pelo próprio pipeline
-painel.html
-_reciclagem/catalogo.csv
-_reciclagem/catalogo.sqlite
-_reciclagem/posts.csv
-_reciclagem/videos.csv
-_reciclagem/imagens.csv
-_reciclagem/cortes.csv
-_reciclagem/pastas_manuais.csv
-_reciclagem/plano_reciclagem.csv
-_reciclagem/projetos.csv
-_reciclagem/movimentos.csv
-_reciclagem/renomeacoes.csv
-_reciclagem/estados.json
-_reciclagem/srt_fila.csv
-_reciclagem/relatorio_indexacao.txt
-_reciclagem/rascunhos/
-_reciclagem/PLANO.md
-_reciclagem/modelo_base.fcproj
-_reciclagem/__pycache__/
+# o layout antigo, enquanto não for removido do repositório
+_reciclagem/
 
-# projetos dos apps e temporários
+# projetos dos apps e temporários (os modelos em assets/ são versionados)
 *.fcproj
+!assets/**/*.fcproj
 *.pcraft
 *.tmp
-*.fcproj.tmp
 *~
 .DS_Store
 

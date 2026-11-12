@@ -1,0 +1,14 @@
+# Identidade visual e arquivos de montagem. Relativos à raiz do acervo publicado; os que começam
+# com assets/ são do projeto.
+[montagem]
+logo = "/run/media/doykoy/SDD/Projetos BCN/Imagens/bcn.png"   # ainda no HD externo
+aberturas = "_aberturas"
+endings = "_endings"
+ending_padrao = "_endings/enceramento1.mp4"
+musicas = "_audio/musicas"
+modelo_fcproj = "assets/marcas/bcn/modelo-base.fcproj"
+
+[cores]
+primaria = "#E30613"
+fundo = "#000000"
+texto = "#FFFFFF"

@@ -1,0 +1,1 @@
+{ "description": "Equilíbrio geral para fala (vlog, depoimento)", "threshold_db": -40, "min_silence": 0.5, "min_clip": 0.2, "pad_before": 0.10, "pad_after": 0.15 }

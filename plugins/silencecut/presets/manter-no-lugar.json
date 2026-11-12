@@ -1,0 +1,1 @@
+{ "description": "Corta no lugar, sem mover nada; silêncios ficam desativados para revisar", "mode": "keep", "silence": "disable", "min_silence": 0.5, "pad_before": 0.10, "pad_after": 0.15 }

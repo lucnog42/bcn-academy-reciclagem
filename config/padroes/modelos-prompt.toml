@@ -1,0 +1,128 @@
+# Modelos de prompt: o ponto de partida que você escolhe ANTES de gerar. Cada um vale para alguns
+# tipos de momento e vira o briefing (motion) ou o prompt (vídeo) com os dados do momento.
+# Uma marca pode acrescentar ou trocar modelos em config/marcas/<marca>/modelos-prompt.toml
+# (mesmo `id` = substitui).
+#
+# Marcas no molde: {texto} {apoio} {duracao} {posicao} {cores} {estilo} {fala}
+
+# ------------------------------------------------------------------ motion (Claude Motion)
+[[modelos]]
+id = "palavra-pop"
+alvo = "motion"
+tipos = ["destaque", "chamada"]
+nome = "Palavra que salta"
+descricao = "a palavra-chave entra grande, com escala e leve rotação, e sai rápido"
+molde = """Texto: "{texto}". Entra em {posicao} da tela com escala de 60% a 100% e 3° de rotação (0,3 s, \
+ease-out), fica parado {duracao}, sai com fade e escala 105% (0,2 s). Tipografia grossa, caixa alta, \
+contorno fino escuro para ler sobre o vídeo. Cores: {cores}. {apoio}"""
+
+[[modelos]]
+id = "marcador"
+alvo = "motion"
+tipos = ["destaque"]
+nome = "Marca-texto"
+descricao = "frase em caixa de texto com um traço de marcador que passa por trás"
+molde = """Frase: "{texto}" em {posicao}, peso médio, caixa normal. Um traço de marcador (cor de destaque: {cores}) \
+passa da esquerda para a direita por trás das palavras-chave em 0,4 s; a frase fica {duracao} e sai com \
+fade. {apoio}"""
+
+[[modelos]]
+id = "contador"
+alvo = "motion"
+tipos = ["numero"]
+nome = "Número que conta"
+descricao = "o número sobe de 0 até o valor, com a legenda do que é embaixo"
+molde = """Número: "{texto}" contando de 0 até o valor em 0,8 s (ease-out), grande, em {posicao}. Embaixo, em \
+corpo pequeno: "{apoio}". Fica {duracao} parado no valor final e sai com fade para cima. Cores: {cores}."""
+
+[[modelos]]
+id = "numero-gigante"
+alvo = "motion"
+tipos = ["numero"]
+nome = "Número gigante"
+descricao = "o número ocupa meia tela, recortado, com a unidade ao lado"
+molde = """"{texto}" ocupando metade da largura, em {posicao}, entrando com máscara de baixo para cima (0,35 s). \
+Unidade/contexto ao lado em corpo menor: "{apoio}". Fica {duracao}. Cores: {cores}."""
+
+[[modelos]]
+id = "lower-third"
+alvo = "motion"
+tipos = ["nome"]
+nome = "Lower third"
+descricao = "nome e papel numa faixa, no terço de cima (o de baixo é da legenda)"
+molde = """Faixa com o nome "{texto}" e, menor, "{apoio}". Fica no terço de cima à esquerda (o de baixo é da \
+legenda), margem de 6%. A faixa abre da esquerda (0,3 s), o texto entra 0,1 s depois, fica {duracao}, \
+tudo fecha para a esquerda. Cores: {cores}."""
+
+[[modelos]]
+id = "etiqueta-seta"
+alvo = "motion"
+tipos = ["nome", "lugar"]
+nome = "Etiqueta com seta"
+descricao = "etiqueta pequena com uma seta apontando para quem fala ou para o lugar"
+molde = """Etiqueta "{texto}" com uma seta curta desenhada à mão apontando para o assunto, em {posicao}. A seta se \
+desenha em 0,4 s, a etiqueta aparece com pop (0,2 s), fica {duracao}. {apoio} Cores: {cores}."""
+
+[[modelos]]
+id = "pin-mapa"
+alvo = "motion"
+tipos = ["lugar"]
+nome = "Pin no mapa"
+descricao = "um mapa simples com o pin caindo no lugar e o nome embaixo"
+molde = """Mapa simplificado (só contornos, sem marcas de outro serviço) em {posicao}, com um pin que cai e quica \
+no lugar "{texto}" (0,5 s); o nome aparece embaixo. {apoio} Fica {duracao} e sai com fade. Cores: {cores}."""
+
+[[modelos]]
+id = "carimbo"
+alvo = "motion"
+tipos = ["lugar", "destaque"]
+nome = "Carimbo"
+descricao = "o texto bate na tela como um carimbo, levemente torto"
+molde = """"{texto}" como carimbo de passaporte, borda dupla, 6° de rotação, em {posicao}. Entra de 140% para 100% \
+com um tremor curto (0,25 s), fica {duracao}. {apoio} Cor: {cores}."""
+
+[[modelos]]
+id = "cta-botao"
+alvo = "motion"
+tipos = ["chamada"]
+nome = "Botão de chamada"
+descricao = "um botão com a chamada e uma mãozinha/cursor tocando"
+molde = """Botão arredondado com "{texto}" em {posicao}; um cursor/dedo toca o botão no meio do tempo e ele \
+afunda 4%. {apoio} Fica {duracao}. Cores: {cores}."""
+
+# ------------------------------------------------------------------ vídeo com IA (b-roll gerado)
+[[modelos]]
+id = "cinematico"
+alvo = "video"
+tipos = ["broll", "lugar", "destaque"]
+nome = "Cinematográfico"
+descricao = "dolly lento, luz dourada, profundidade de campo rasa"
+molde = """{texto}. Slow dolly-in, golden hour light, shallow depth of field, gentle film grain, vertical 9:16. \
+{apoio} Style: {estilo}. No text, no logos, no recognizable real people."""
+
+[[modelos]]
+id = "drone"
+alvo = "video"
+tipos = ["broll", "lugar"]
+nome = "Drone"
+descricao = "plano aéreo abrindo sobre o lugar"
+molde = """Aerial drone shot rising and slowly revealing {texto}. Wide establishing view, smooth motion, natural \
+colors, vertical 9:16. {apoio} Style: {estilo}. No text, no logos, no recognizable real people."""
+
+[[modelos]]
+id = "detalhe"
+alvo = "video"
+tipos = ["broll", "destaque", "numero"]
+nome = "Detalhe de perto"
+descricao = "macro de um objeto do assunto, foco que puxa"
+molde = """Close-up macro detail of {texto}, rack focus from foreground to subject, soft side light, slow motion, \
+vertical 9:16. {apoio} Style: {estilo}. No text, no logos, no faces."""
+
+[[modelos]]
+id = "camera-mao"
+alvo = "video"
+tipos = ["broll", "chamada"]
+nome = "Câmera na mão"
+descricao = "handheld documental, energia de bastidor"
+molde = """Handheld documentary shot of {texto}, natural movement, real ambience, daylight, vertical 9:16. \
+{apoio} Style: {estilo}. No text, no logos, no recognizable real people."""

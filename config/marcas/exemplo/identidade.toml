@@ -1,0 +1,11 @@
+# Arquivos de montagem (relativos à raiz do acervo; os que começam com assets/ são do projeto).
+[montagem]
+aberturas = "_aberturas"
+endings = "_endings"
+musicas = "_audio/musicas"
+# modelo_fcproj = "assets/marcas/exemplo/modelo-base.fcproj"   # sem isto, usa o modelo neutro
+
+[cores]
+primaria = "#6F4E37"
+fundo = "#1B1410"
+texto = "#F5EBDD"

@@ -1,0 +1,7 @@
+# A linha de estilo: vai no fim de todo prompt de imagem/vídeo gerado, para tudo parecer do
+# mesmo mundo. Um por marca; `por_pilar` sobrescreve quando o pilar pede outro clima.
+[estilo]
+linha = "realistic sports documentary, natural daylight, warm tones, slight film grain, handheld feel, vertical 9:16"
+
+[estilo.por_pilar]
+MIC = "tournament energy, bright sunlight, crowd and flags, vivid colors, vertical 9:16"

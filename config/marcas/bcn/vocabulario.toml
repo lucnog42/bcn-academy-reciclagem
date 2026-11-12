@@ -1,0 +1,37 @@
+# Vocabulário da marca para títulos, evergreen e hashtags.
+
+evergreen = ["oportunidade", "intercâmbio", "intercambio", "sonho", "espanha", "barcelona", "atleta", "vaga", "bolsa", "futebol de base", "futebolbase", "venha jogar", "garanta", "inscri"]
+hashtags = "#futebol #futeboldebase #bcnacademy #intercambio #espanha"
+# palavras de legenda que nunca são nome de pessoa
+nao_nomes = ["academy", "barcelona", "bcn", "brasil", "camp", "clube", "copa", "espanha", "españa", "europa", "futebol", "fútbol", "girona", "instagram", "intercambio", "intercâmbio", "lloret", "madrid", "marcet", "mic", "monday", "mundial", "nou", "sports", "sub", "time"]
+# nomes de evento: regex -> como escrever
+eventos = [
+  ["\\bcopa\\s+mic(?:football)?\\b", "Copa Micfootball", true],
+  ["\\bmic\\s*football\\b", "MIC Football"],
+  ["\\bmic\\s*(20\\d\\d)\\b", "MIC", true],
+  ["\\bmic\\b", "MIC", true],
+  ["\\bcopa\\s+girona\\b", "Copa Girona", true],
+  ["\\bdesafio\\s+barcelona\\b", "Desafio Barcelona"],
+  ["\\bbcn\\s*cup\\b", "BCN Cup", true],
+  ["\\bcopa\\s+ibero[\\w-]*\\b|\\bibero[\\s-]*americano\\b", "Ibero Americano"],
+  ["\\bnike\\s*3\\s*x\\s*3\\b", "Nike 3x3"],
+  ["\\bcopa\\s+diadora\\b", "Copa Diadora"],
+  ["\\bmarcet\\b", "Marcet"],
+  ["\\bcenafe\\b", "Cenafe"],
+]
+lugares = [
+  ["camp nou", "Camp Nou"],
+  ["masia", "La Masia"],
+  ["lloret", "Lloret de Mar"],
+  ["girona", "Girona"],
+  ["tibidabo", "Tibidabo"],
+  ["bacelona", "Barcelona"],
+  ["barcelona", "Barcelona"],
+  ["madrid", "Madrid"],
+  ["valencia", "Valência"],
+  ["espanha", "Espanha"],
+  ["españa", "Espanha"],
+]
+
+# acentos para nomes de pasta ("Futebol Campeao" -> "Futebol Campeão")
+acentos = { "campeao" = "Campeão", "otavio" = "Otávio", "joao" = "João", "lucio" = "Lúcio", "vinicius" = "Vinícius", "goncalves" = "Gonçalves", "antonio" = "Antônio", "nicolas" = "Nicolás", "lucas" = "Lucas", "pais" = "Pais", "copa" = "Copa" }

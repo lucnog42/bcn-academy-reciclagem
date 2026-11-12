@@ -1,0 +1,10 @@
+# Transcrição (faster-whisper com GPU). Instale num venv em .venv-asr/ na raiz do projeto:
+#   python3.11 -m venv .venv-asr && .venv-asr/bin/pip install -r requirements-asr.txt
+# Versões tiradas do venv que já funcionava (CUDA 12 dentro do venv; o sistema pode estar no 13).
+faster-whisper==1.2.1
+ctranslate2==4.9.0
+nvidia-cublas-cu12==12.9.3.13
+nvidia-cudnn-cu12==9.28.1.4
+nvidia-cuda-nvrtc-cu12==12.9.86
+numpy==2.4.6
+onnxruntime==1.31.1

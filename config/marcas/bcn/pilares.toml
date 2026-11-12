@@ -1,0 +1,90 @@
+# Pilares (temas) da marca e as palavras que os revelam na legenda e na fala.
+# peso: 3 = específico do tema, 2 = contextual, 1 = fraco. Ver acervo/colecao.py.
+
+[pilares]
+ordem = ["DEPOIMENTO", "MIC", "INTERCAMBIO", "ATLETA", "JOGO", "AVALIACAO", "BASTIDOR", "DIVULGACAO"]
+# rótulo quando nada decide (o produto também usa SEM_LEGENDA para "sem texto")
+fallback = "OUTROS"
+evidencia_minima = 2.5
+
+[pilares.angulo]   # como reaproveitar cada pilar (plano de reciclagem)
+"DEPOIMENTO" = "prova social — quem já foi conta"
+"AVALIACAO" = "chamada para a próxima avaliação (CTA direto)"
+"MIC" = "arquivo do torneio — nostalgia + 'vem jogar em 2027'"
+"SEM_LEGENDA" = "material sem texto — escrever legenda do zero pelo visual"
+"INTERCAMBIO" = "antes/depois do intercâmbio (rotina, escola, clube)"
+"ATLETA" = "trajetória do atleta — daqui até o profissional"
+"JOGO" = "lance/gol como prova de nível técnico"
+"BASTIDOR" = "bastidor humano — treino, viagem, chegada"
+"DIVULGACAO" = "oferta reaproveitada com nova oferta/data"
+"OUTROS" = "material de arquivo para completar o feed"
+
+[termos]
+"DEPOIMENTO" = { "depoimento" = 3, "nos contou" = 3, "conta como foi" = 3, "minha história" = 3, "meu relato" = 3, "mudou minha vida" = 3, "realizou o sonho" = 3, "sonho realizado" = 3, "valeu cada segundo" = 3, "melhor decisão" = 3, "relato" = 2, "testemunho" = 2, "aprendi muito" = 2, "valeu a pena" = 2, "me eligió" = 3, "sorte do mundo" = 2.5, "recomendo" = 2, "experiência que marcou" = 2, "gratidão" = 2, "agradecemos" = 1.5, "obrigado" = 0.5, "obrigada" = 0.5, "agradeço" = 0.5 }
+"MIC" = { "micfootball" = 3, "#micfootball" = 3, "copa mic" = 3, "wearemic" = 3, "copa iber" = 3, "mic 2022" = 3, "mic 2023" = 3, "mic 2024" = 3, "mic 2025" = 3, "torneio mic" = 3, "mic football" = 3, "mic cup" = 3, "mic" = 2, "lloret" = 1.5 }
+"INTERCAMBIO" = { "intercâmbio" = 3, "intercambio" = 3, "programa de intercâmbio" = 3, "bolsa de estudos" = 3, "bolsa integral" = 3, "morar na espanha" = 3, "estudar na espanha" = 3, "residência" = 3, "dni" = 3, "visto de estudante" = 3, "programa bcn" = 3, "desafio barcelona" = 3, "espanha" = 2, "españa" = 2, "marcet" = 2, "temporada" = 2, "acadêmica" = 1.5, "academica" = 1.5, "escola" = 1.5, "programa" = 1, "barcelona" = 1, "fora do país" = 1.5, "experiência internacional" = 2, "sueño" = 2, "fútbol internacional" = 2, "instalaciones" = 1.5 }
+"ATLETA" = { "nosso atleta" = 3, "novo clube" = 3, "assinou com" = 3, "contratado pelo" = 3, "se apresentou ao" = 3, "reforço do" = 3, "rumo à espanha" = 3, "rumo a espanha" = 3, "rumo à europa" = 3, "atleta" = 2, "transferência" = 2, "carreira" = 1.5, "profissional" = 1.5, "clube" = 1, "jogador" = 1, "cirurgia" = 2, "recuperação" = 2, "lesão" = 2, "primeiros passos" = 1.5 }
+"JOGO" = { "gol de" = 3, "golaço" = 3, "placar" = 3, "vitória por" = 3, "campeão" = 3, "título" = 3, "classificado para" = 3, "semifinal" = 2.5, "quartas de final" = 2.5, "adversário" = 2, "enfrenta" = 2, "gol" = 2, "gols" = 2, "jogo" = 2, "partida" = 2, "torneio" = 2, "campeonato" = 2, "estreia" = 2, "sub-14" = 1, "sub14" = 1, "sub-16" = 1, "sub16" = 1, "sub-18" = 1, "sub18" = 1, "copa" = 1.5, "equipe" = 1, "time" = 1, "resultado" = 1.5, "ao vivo" = 2, "transmitir" = 1.5, "equipo" = 1.5, "partido" = 2, "entrenamiento" = 1 }
+"AVALIACAO" = { "avaliação" = 3, "avaliações" = 3, "peneira" = 3, "seletiva" = 3, "tryout" = 3, "processo seletivo" = 3, "inscrições abertas" = 3, "aprovado na avaliação" = 3, "aprovado" = 2, "selecionado" = 2, "candidato" = 2, "inscrição" = 2, "teste" = 1.5, "vaga" = 1, "inscreva" = 1 }
+"BASTIDOR" = { "bastidores" = 3, "nos bastidores" = 3, "primeiro dia" = 2.5, "rotina de treino" = 3, "visita ao estádio" = 3, "tour pelo" = 3, "treino" = 2, "aeroporto" = 2, "chegada" = 2, "passeio" = 2, "viagem" = 2, "estádio" = 2, "estadio" = 2, "camp nou" = 2, "tibidabo" = 2, "cidade" = 1, "camp day" = 3, "tour" = 2.5, "entrenamiento" = 2, "conhecer de perto" = 2, "churrasco" = 2, "parrillada" = 2, "instalações" = 1.5, "dia a dia" = 1.5, "conheça" = 1, "alojamento" = 1.5, "hotel" = 1.5, "dia de treino" = 2 }
+"DIVULGACAO" = { "sorteio" = 3, "sortearemos" = 3, "convite" = 3, "promoção" = 3, "seja parceiro" = 3, "garanta sua vaga" = 3, "link na bio" = 3, "vagas limitadas" = 2.5, "comente" = 2, "marque" = 2, "compartilhe" = 2, "chama no" = 2, "whatsapp" = 2, "direct" = 2, "dm" = 2, "inscreva-se" = 2, "desconto" = 2, "parceria" = 2, "venha jogar" = 1.5, "corre" = 1, "últimas vagas" = 1.5 }
+
+# último recurso, só quando a legenda não deu evidência suficiente
+[local_pilar]
+"marcet" = "INTERCAMBIO"
+"camp nou" = "BASTIDOR"
+"lloret" = "MIC"
+"guineueta" = "JOGO"
+
+[pasta]
+# nome da pasta organizada à mão (lista ORDENADA: vence o primeiro que casar)
+pistas = [
+  ["treino", "BASTIDOR"],
+  ["passeio", "BASTIDOR"],
+  ["aeroporto", "BASTIDOR"],
+  ["assistindo", "BASTIDOR"],
+  ["destaques", "BASTIDOR"],
+  ["material", "BASTIDOR"],
+  ["depoimento", "DEPOIMENTO"],
+  ["salve", "DEPOIMENTO"],
+  ["avaliacao", "AVALIACAO"],
+  ["avaliação", "AVALIACAO"],
+  ["cenafe", "AVALIACAO"],
+  ["mic", "MIC"],
+  ["iber", "MIC"],
+  ["copa", "MIC"],
+  ["marcet", "INTERCAMBIO"],
+  ["intercambio", "INTERCAMBIO"],
+  ["passaporte", "INTERCAMBIO"],
+  ["champions", "INTERCAMBIO"],
+  ["jogo", "JOGO"],
+  ["juvenil", "JOGO"],
+  ["guineueta", "JOGO"],
+  ["goleiro", "JOGO"],
+  ["classificados", "JOGO"],
+  ["fcf", "JOGO"],
+  ["bravos", "JOGO"],
+  ["barca", "JOGO"],
+  ["promocao", "DIVULGACAO"],
+  ["sorteio", "DIVULGACAO"],
+  ["parceiro", "DIVULGACAO"],
+  ["convite", "DIVULGACAO"],
+  ["nike", "DIVULGACAO"],
+  ["atleta", "ATLETA"],
+]
+
+# tema da pasta de cortes -> pilar
+[tema_pilar]
+"depoimento" = "DEPOIMENTO"
+"entrevista" = "DEPOIMENTO"
+"futebol" = "JOGO"
+"jogo" = "JOGO"
+"gol" = "JOGO"
+"treino" = "BASTIDOR"
+"hotel" = "BASTIDOR"
+"passeio" = "BASTIDOR"
+"costa rica" = "BASTIDOR"
+
+[cortes]
+# pilar de um corte quando nem o tema nem a fala decidem
+padrao = "DEPOIMENTO"

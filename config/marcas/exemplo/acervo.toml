@@ -1,0 +1,20 @@
+# Onde está o material da marca. Caminho diferente nesta máquina? Sobrescreva em config/local.toml:
+#   [marcas.exemplo.acervo.publicado]
+#   raiz = "/outro/lugar"
+[publicado]
+raiz = "~/arquivo/exemplo"
+posts = "_posts"
+cortes = "_Cortes"
+transcricoes = "transcricoes"
+projetos = "junto_do_item"
+saidas = "saidas"
+
+[[fontes]]
+id = "posts"
+tipo = "posts"
+nome = "Posts publicados"
+
+[[fontes]]
+id = "cortes"
+tipo = "cortes"
+nome = "Cortes"

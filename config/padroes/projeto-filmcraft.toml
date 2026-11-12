@@ -1,0 +1,6 @@
+# Regras do modelo de projeto (valem para qualquer marca).
+abertura_s = 6.0            # abertura sem fala
+abertura_com_fala_s = 4.0   # com legenda ativa a abertura encurta
+legenda_max_palavras = 4
+legenda_corpo_pt = 40
+sfx_antes_do_ending_s = 2.2

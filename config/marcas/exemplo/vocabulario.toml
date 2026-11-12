@@ -1,0 +1,6 @@
+evergreen = ["café", "torra", "receita"]
+hashtags = "#cafe #cafeespecial"
+nao_nomes = ["café", "instagram"]
+eventos = []
+lugares = []
+acentos = {}

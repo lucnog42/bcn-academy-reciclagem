@@ -1,0 +1,20 @@
+# O que uma imagem sobre a fala pode fazer. Sem função, sem imagem (doc 02/plano de imagens).
+[funcoes.provar]
+nome = "provar"
+descricao = "mostra que é real: o lugar, o clube, o momento, a pessoa (só foto/vídeo verdadeiro)"
+pode_gerar = false
+
+[funcoes.clima]
+nome = "dar o clima"
+descricao = "situa e emociona: cidade, viagem, ambiente"
+pode_gerar = true
+
+[funcoes.contraste]
+nome = "contraste"
+descricao = "antes e depois, aqui e lá"
+pode_gerar = true
+
+[funcoes.so-a-pessoa]
+nome = "só a pessoa"
+descricao = "nenhuma imagem: a fala segura sozinha"
+pode_gerar = false

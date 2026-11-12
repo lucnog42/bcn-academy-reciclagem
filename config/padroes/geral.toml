@@ -1,0 +1,19 @@
+# Padrões do produto: valem para qualquer marca. A marca (config/marcas/<marca>/) e o
+# config/local.toml (desta máquina, fora do git) escrevem por cima.
+
+[legenda]
+max_palavras = 4      # palavras por cartela
+pausa = 0.25          # s de pausa que quebra cartela
+saida = 0.08          # s que a cartela fica depois da última palavra
+
+[montagem]
+musica_db = -18.0           # dB da trilha
+musica_sob_fala_db = -24.0  # dB da trilha quando há fala
+
+[claude]
+modelo = "claude-opus-5-5"
+max_tokens = 4000
+
+[app]
+preview_som = "mpv"
+miniatura_px = 360    # px do lado maior das miniaturas da grade

@@ -1,0 +1,32 @@
+# Onde está o material da marca e como ele é organizado. Caminhos relativos são relativos à
+# `raiz` da fonte. Caminho desta máquina diferente? Sobrescreva em config/local.toml:
+#   [marcas.bcn.acervo.publicado]
+#   raiz = "/outro/lugar"
+
+[publicado]
+# o acervo dos posts publicados (scraper do Instagram + organização)
+raiz = "~/arquivo/BCN/bcn_academy"
+posts = "_posts"
+cortes = "_Cortes"
+transcricoes = "transcricoes"
+projetos = "junto_do_item"   # .fcproj ao lado do post/pasta de cortes
+saidas = "saidas"            # subpasta do item onde os plugins gravam arquivos gerados
+
+# Fontes de b-roll que o "achar" consulta (além dos posts e cortes do acervo publicado).
+[[fontes]]
+id = "posts"
+tipo = "posts"
+nome = "Posts publicados"
+
+[[fontes]]
+id = "cortes"
+tipo = "cortes"
+nome = "Cortes"
+
+[[fontes]]
+id = "bruto"
+tipo = "pasta"
+nome = "Arquivo bruto (HD externo)"
+raiz = "/run/media/doykoy/F2A084D7A084A3A7/BCN"
+ativo = false                 # liga depois do diagnóstico (doc 07)
+ignorar = ["Catalogo Mic 2024", "Auto-Save", ".lrdata", "Previews"]

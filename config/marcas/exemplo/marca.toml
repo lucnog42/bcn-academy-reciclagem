@@ -1,0 +1,12 @@
+# Molde para um cliente novo: copie esta pasta para config/marcas/<slug>/ e troque os textos.
+# A IA recebe estes campos como contexto fixo em toda sugestão e todo prompt.
+[marca]
+slug = "exemplo"
+nome = "Marca Exemplo"
+instagram = "@marca_exemplo"
+idioma = "pt-BR"
+descricao = "A Marca Exemplo (fictícia) vende café torrado na hora e conta a história de quem planta e de quem torra."
+publico = "quem gosta de café especial"
+formato_padrao = "vídeo vertical 9:16 para o Instagram"
+cores_texto = "marrom, creme e preto"
+pessoas_reais = "nunca gerar nem reestilizar pessoas reais da marca: só em foto/vídeo verdadeiro"
