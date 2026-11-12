@@ -68,7 +68,25 @@ def _parece_sem_visao(erro: str) -> bool:
 
 
 def conversar(conteudo: list, sistema: str = "", max_tokens: int = 3000) -> str:
-    """Manda a mensagem ao provedor escolhido e devolve o texto da resposta."""
+    """Manda a mensagem ao provedor escolhido e devolve o texto da resposta.
+
+    Modelos que "pensam" antes de responder (DeepSeek, alguns do OpenRouter) podem gastar o limite
+    de tokens todo no raciocínio e voltar com a resposta vazia: nesse caso o pedido é refeito uma vez
+    com um limite 4x maior; se ainda vier vazio, o erro diz o porquê."""
+    texto, motivo = _conversar(conteudo, sistema, max_tokens)
+    if not texto.strip() and motivo in ("length", "max_tokens", "raciocinio"):
+        print(f"  (resposta vazia: o modelo gastou os {max_tokens} tokens pensando; refazendo com mais espaço)", flush=True)
+        texto, motivo = _conversar(conteudo, sistema, min(max_tokens * 4, 32000))
+    if not texto.strip():
+        p = config.ia()
+        raise RuntimeError(f"{p['nome']} ({p['modelo']}) devolveu uma resposta vazia"
+                           + (f" (motivo: {motivo})" if motivo else "")
+                           + ". Tente de novo ou escolha outro modelo no botão da IA.")
+    return texto
+
+
+def _conversar(conteudo: list, sistema: str, max_tokens: int) -> tuple[str, str]:
+    """(texto, motivo de parada) da resposta."""
     p = config.ia()
     chave = config.chave(p["id"])
     if p["chave"] and not chave:
@@ -81,7 +99,8 @@ def conversar(conteudo: list, sistema: str = "", max_tokens: int = 3000) -> str:
         if sistema:
             corpo["system"] = sistema
         resp = _post(f"{p['base_url']}/messages", corpo, _cabecalhos(p, chave))
-        return "".join(b.get("text", "") for b in resp.get("content", []) if b.get("type") == "text")
+        texto = "".join(b.get("text", "") for b in resp.get("content", []) if b.get("type") == "text")
+        return texto, str(resp.get("stop_reason") or "")
 
     def pedir(com_imagens: bool) -> dict:
         msgs = ([{"role": "system", "content": sistema}] if sistema else []) + \
@@ -98,11 +117,17 @@ def conversar(conteudo: list, sistema: str = "", max_tokens: int = 3000) -> str:
             raise
         print(f"  ({p['modelo']} não aceita imagens: pergunta refeita só com o texto)", flush=True)
         resp = pedir(False)
-    msg = (resp.get("choices") or [{}])[0].get("message") or {}
+    escolha = (resp.get("choices") or [{}])[0]
+    msg = escolha.get("message") or {}
     texto = msg.get("content") or ""
     if isinstance(texto, list):
         texto = "".join(x.get("text", "") for x in texto if isinstance(x, dict))
-    return texto
+    motivo = str(escolha.get("finish_reason") or "")
+    if not texto.strip() and (msg.get("reasoning_content") or msg.get("reasoning")):
+        motivo = motivo or "raciocinio"
+        if motivo == "stop":
+            motivo = "raciocinio"
+    return texto, motivo
 
 
 def info() -> dict:

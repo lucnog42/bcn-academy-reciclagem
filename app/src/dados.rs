@@ -481,6 +481,8 @@ pub struct FuncaoRoteiro {
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct Banco {
     #[serde(default)]
+    pub montando: bool,
+    #[serde(default)]
     pub frases: u64,
     #[serde(default)]
     pub videos: u64,

@@ -36,8 +36,13 @@ pub fn aba(s: &App, t: Tema, k: &rune_kit::Kit) -> El {
 fn lado(s: &App, t: Tema, k: &rune_kit::Kit) -> El {
     let x = &s.x;
     let mut c = col().key("rot-lado").w_full().gap(10.0).padding(14.0).scroll(ScrollSpec { stick_bottom: false })
-        .child(text(format!("Banco de falas: {} frases de {} vídeos ({} itens)", x.banco.frases, x.banco.videos, x.banco.itens))
-            .font(tema::PEQ).color(if x.banco.frases == 0 { t.alerta } else { t.dim }).wrap())
+        .child(row().w_full().gap(8.0).center_y()
+            .child(text(if x.banco.montando { "Montando o banco de falas (lendo as transcrições)…".to_string() }
+                        else if x.banco.frases == 0 { "Banco de falas vazio: transcreva vídeos (Legendar, ou Importar → transcrever) e atualize".to_string() }
+                        else { format!("Banco de falas: {} frases de {} vídeos ({} itens)", x.banco.frases, x.banco.videos, x.banco.itens) })
+                .font(tema::PEQ).color(if x.banco.frases == 0 { t.alerta } else { t.dim }).wrap().grow(1.0).min_w(0.0))
+            .child(botao("rot-banco", if x.banco.montando { "atualizando…" } else { "atualizar" }, t.dim, x.banco.montando, t,
+                         |s: &mut App| { if !s.x.banco.montando { s.banco_atualizar() } })))
         .child(TextInput::new(&x.tema).placeholder("tema ou pedido (ex.: convite para a avaliação de 2027)")
             .on_edit(|s: &mut App| &mut s.x.tema).build(k).key("rot-tema").w_full());
     let mut fmts = row().w_full().gap(6.0).flex_wrap();

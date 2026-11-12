@@ -109,6 +109,11 @@ impl App {
     // ------------------------------------------------------------ roteiros
     pub fn roteiros_recarregar(&mut self) { self.pedir(Pedido::Roteiros, "roteiros", json!({})); }
 
+    pub fn banco_atualizar(&mut self) {
+        self.x.banco.montando = true;
+        self.pedir(Pedido::FonteAcao("banco".into()), "falas_indexar", json!({}));
+    }
+
     pub fn roteiro_ideias(&mut self) {
         if !self.claude { self.aviso = Some("sem chave da IA: veja chaves e config".into()); return; }
         self.x.pensando_ideias = true;
@@ -213,6 +218,9 @@ impl App {
                     self.aviso = Some(format!("pasta apontada: {} ({} arquivo(s) no índice). Nada foi copiado.",
                                               r["nome"].as_str().unwrap_or(""), r["indexados"].as_u64().unwrap_or(0)));
                     if let Some(fid) = r["id"].as_str() { let fid = fid.to_string(); self.fonte_acao(&fid, "fonte_contar", json!({})); }
+                } else if id == "banco" {
+                    self.aviso = Some("montando o banco de falas a partir das transcrições…".into());
+                    return;
                 } else {
                     self.aviso = Some("pronto".into());
                 }

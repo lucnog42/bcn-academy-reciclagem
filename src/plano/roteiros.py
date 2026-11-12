@@ -93,7 +93,7 @@ def ideias(tema: str = "", n: int = 4) -> list[dict]:
               '{"ideias": [{"titulo": "...", "formato": "<id do formato>", "objetivo": "o que o vídeo faz o público sentir/fazer", '
               '"gancho": "a primeira frase", "por_que": "por que funciona com este material", '
               '"buscas": ["2-4 palavras", "..."], "falas": ["ids das falas centrais"]}]}')
-    r = momentos._json_de(ia.conversar([{"type": "text", "text": pedido}], _sistema(), 2500))
+    r = momentos._json_de(ia.conversar([{"type": "text", "text": pedido}], _sistema(), 6000))
     out = []
     for i in r.get("ideias") or []:
         if not isinstance(i, dict) or not i.get("titulo"):
@@ -151,7 +151,7 @@ def escrever(tema: str = "", formato: str = "", duracao: int = 0, ideia: str = "
               '"mostrar": "2-5 palavras", "por_que": "..."},\n'
               ' {"parte": "...", "tipo": "nova", "texto": "a fala nova, até 25 palavras", "quem": "locução ou quem deve gravar", '
               '"funcao": "...", "mostrar": "...", "por_que": "..."}\n]}')
-    r = momentos._json_de(ia.conversar([{"type": "text", "text": pedido}], _sistema(), 3500))
+    r = momentos._json_de(ia.conversar([{"type": "text", "text": pedido}], _sistema(), 8000))
     por_id = {f["id"]: f for f in pool}
     faltando = [str(p.get("id")) for p in r.get("partes") or [] if isinstance(p, dict) and p.get("tipo") == "fala"
                 and str(p.get("id")) not in por_id]

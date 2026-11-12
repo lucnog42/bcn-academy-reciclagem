@@ -167,9 +167,32 @@ def m_fonte_transcrever(d):
 
 
 # ------------------------------------------------------------------ roteiros
+_BANCO = {"montando": False}
+
+
+def _montar_banco() -> None:
+    """Monta o banco de falas em segundo plano; o app recebe `posts_atualizados` (roteiros) no fim."""
+    from plano import falas
+    if _BANCO["montando"]:
+        return
+    _BANCO["montando"] = True
+
+    def rodar():
+        try:
+            falas.indexar()
+        finally:
+            _BANCO["montando"] = False
+            emitir({"evento": "posts_atualizados", "lista": "roteiros"})
+    threading.Thread(target=rodar, daemon=True).start()
+
+
 def m_roteiros(_):
     from plano import falas, roteiros
-    return {"roteiros": roteiros.listar(), "ideias": roteiros.ler_ideias(), "banco": falas.total(),
+    banco = falas.total()
+    if not banco["frases"] and not _BANCO["montando"]:
+        _montar_banco()                       # primeira vez neste cliente: monta sozinho
+    banco["montando"] = _BANCO["montando"]
+    return {"roteiros": roteiros.listar(), "ideias": roteiros.ler_ideias(), "banco": banco,
             "formatos": [{"id": k, "nome": v.get("nome", k), "descricao": v.get("descricao", ""),
                           "duracao": v.get("duracao", 45)} for k, v in roteiros.formatos().items()],
             "funcoes": [{"id": k, "nome": v.get("nome", k), "descricao": v.get("descricao", ""),
@@ -219,8 +242,9 @@ def m_roteiro_exportar(d):
 
 
 def m_falas_indexar(_):
-    from plano import falas
-    return {"frases": falas.indexar()}
+    """Refaz o banco de falas (em segundo plano)."""
+    _montar_banco()
+    return {"montando": True}
 
 
 # ------------------------------------------------------------------ motion (HyperFrames)
