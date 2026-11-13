@@ -1,0 +1,386 @@
+From 98ec2941a5e7425dcdc994e9fed39cdedeecc4de Mon Sep 17 00:00:00 2001
+From: Lucas <lucnog42@users.noreply.github.com>
+Date: Fri, 13 Nov 2026 10:48:39 -0300
+Subject: [PATCH] =?UTF-8?q?Configura=C3=A7=C3=A3o=20da=20fase:=20CLAUDE.md?=
+ =?UTF-8?q?,=20plano=2008,=20tags=20por=20marca,=20separa=C3=A7=C3=A3o=20d?=
+ =?UTF-8?q?e=20voz?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01BcNGM3PW4msntB5yGHEBbB
+---
+ .gitignore                                |   1 +
+ CLAUDE.md                                 |  83 ++++++++++++
+ config/marcas/bcn/tags.toml               |  33 +++++
+ config/marcas/exemplo/tags.toml           |  28 +++++
+ config/padroes/separacao.toml             |  11 ++
+ docs/08-plano-fase-import-voz-roteiros.md | 147 ++++++++++++++++++++++
+ requirements-separacao.txt                |   5 +
+ 7 files changed, 308 insertions(+)
+ create mode 100644 CLAUDE.md
+ create mode 100644 config/marcas/bcn/tags.toml
+ create mode 100644 config/marcas/exemplo/tags.toml
+ create mode 100644 config/padroes/separacao.toml
+ create mode 100644 docs/08-plano-fase-import-voz-roteiros.md
+ create mode 100644 requirements-separacao.txt
+
+diff --git a/.gitignore b/.gitignore
+index 9e8619a..5a9cd21 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -3,6 +3,7 @@ dados/
+ # chaves e caminhos desta máquina
+ config/local.toml
+ .venv-asr/
++.venv-sep/
+ app/target/
+ __pycache__/
+ *.pyc
+diff --git a/CLAUDE.md b/CLAUDE.md
+new file mode 100644
+index 0000000..bb4dd44
+--- /dev/null
++++ b/CLAUDE.md
+@@ -0,0 +1,83 @@
++# CLAUDE.md — Video Automation NG3
++
++Guia para quem (humano ou Claude) mexe neste repositório. Leia antes de qualquer mudança.
++
++## Antes de mudar qualquer coisa
++
++1. `git status` limpo. Se houver algo pendente, **commit primeiro** (regra do Lucas).
++2. Trabalhe direto na instalação do SDD: `/run/media/doykoy/SDD/NG3-Video-Automation`.
++3. Uma frente por branch: `fase/tags-import`, `fase/separacao-voz`, `fase/roteiros-abertos`,
++   `fase/filmcraft-sync` (ver `docs/08-plano-fase-import-voz-roteiros.md`).
++4. Rode os testes antes e depois: `python3 -m unittest discover -s testes`.
++
++## O que é o projeto
++
++Pipeline de vídeo para Instagram, **agnóstico de marca**. Painel nativo em Rust/Rune (`app/`)
++conversa por JSON com o motor Python (`src/painel/api.py serve`). Plugins em Luau (`plugins/`).
++Projetos de edição são `.fcproj` do FilmCraft, manipulados como JSON e validados com
++`filmcraft-cli --project <p> inspect`.
++
++```
++config/padroes/*.toml   padrões do produto; cada arquivo vira cfg["<nome>"] (geral.toml vai na raiz)
++config/marcas/<marca>/  tudo que é do cliente (nada de marca no código!)
++config/local.toml       chaves e caminhos desta máquina (fora do git)
++dados/marcas/<marca>/   estado: índices sqlite, transcrições, roteiros, filas, cache (fora do git)
++src/nucleo/             config, caminhos, cliente da IA
++src/acervo/             fontes (import), coleção, catálogo, mídia
++src/transcricao/        legendar (faster-whisper), voz (VAD/refino), legendas
++src/plano/              roteiros, falas (banco de frases), momentos, prompts
++src/projetos/           gerar, modelo, fcproj (edição in-place), linha_tempo
++src/painel/api.py       a ponte: toda ação do app passa aqui
++app/src/ui/*.rs         uma aba por arquivo (importar.rs, roteiros.rs, preview.rs…)
++```
++
++## Regras que não mudam
++
++- **Nada no acervo nem nas pastas importadas é apagado, sobrescrito ou criado.** Fontes são
++  apontadas, não copiadas. Cortes e tags são **anotações** em `dados/`, nunca arquivos novos.
++- Antes de gravar um `.fcproj`: cópia em `dados/marcas/<marca>/historico/projetos_antigos/` e
++  validação com `filmcraft-cli inspect`; se recusar, a cópia volta (use `fcproj.salvar`).
++- Chaves só por variável de ambiente ou `config/local.toml`; a API nunca as devolve.
++- Pessoas reais da marca nunca são geradas nem reestilizadas por IA (`pessoas_reais`).
++- Código e identificadores em **português**, como o resto do projeto (`fonte`, `corte`, `fala`).
++- Nada de nome de marca no código: `testes/test_agnosticidade.py` falha se aparecer.
++- Escrita de JSON sempre atômica (`.tmp` + `os.replace`), como em `fontes._gravar`.
++
++## Máquina (limita as escolhas)
++
++Ryzen 7 6800HS · **RTX 3050 4 GB VRAM** · **14 GB RAM (gargalo)** · acervo em HD USB SMR NTFS.
++Consequências: modelos de IA em série (nunca dois na GPU ao mesmo tempo), lotes com
++paralelismo 2–4, áudio extraído para `/tmp` em wav 16 kHz mono, build do Rust fora do SDD:
++
++```
++cd app && CARGO_TARGET_DIR=~/.cache/ng3-target cargo build --release
++cp ~/.cache/ng3-target/release/ng3-painel ./ng3-painel
++```
++
++## Ambientes Python
++
++| venv | para quê | requisitos |
++|---|---|---|
++| sistema `python3` | painel, api, roteiros, projetos | só stdlib + numpy |
++| `.venv-asr/` | transcrição (faster-whisper, CUDA 12) | `requirements-asr.txt` |
++| `.venv-sep/` | separação de voz/música | `requirements-separacao.txt` |
++
++Venvs separados de propósito: torch/onnxruntime-gpu da separação brigam com as versões fixas
++do ASR. O motor chama cada venv por subprocess, como `legendar.garantir_venv()` já faz.
++
++## Como adicionar uma ação nova no painel
++
++1. Função pura no módulo Python certo (testável sem app).
++2. Ação em `src/painel/api.py` (validar entrada; caminhos só dentro de `_raizes_permitidas()`).
++3. Chamada na aba `app/src/ui/<aba>.rs` via `ponte.rs`; estado em `app.rs`/`extra.rs`.
++4. Teste em `testes/test_<area>.py` com dados falsos (sem GPU, sem rede, sem acervo real).
++
++## Comandos úteis
++
++```
++python3 -m unittest discover -s testes            # testes (rápidos, sem GPU)
++python3 src/acervo/fontes.py                       # lista fontes
++python3 src/plano/roteiros.py ideias "tema"        # roteiros pela CLI
++python3 src/projetos/fcproj.py legendas <p> <v>    # refaz só as legendas do projeto
++cd app && cargo check                              # confere o Rust sem build completo
++```
+diff --git a/config/marcas/bcn/tags.toml b/config/marcas/bcn/tags.toml
+new file mode 100644
+index 0000000..95eac06
+--- /dev/null
++++ b/config/marcas/bcn/tags.toml
+@@ -0,0 +1,33 @@
++# Tags da BCN: vocabulário controlado para o import, os cortes e a busca.
++# Tags livres podem ser criadas no painel; as que se repetem podem ser promovidas para cá.
++# Cada categoria: nome, se aceita várias tags por mídia, e a lista (slug = "Nome visível").
++
++[categorias.pessoa]
++nome = "Pessoa"
++multipla = true
++tags = {}                      # ex.: { "fulano" = "Fulano da Silva" }
++
++[categorias.lugar]
++nome = "Lugar"
++multipla = true
++tags = { "barcelona" = "Barcelona", "camp-nou" = "Camp Nou", "la-masia" = "La Masia", "lloret" = "Lloret de Mar", "girona" = "Girona", "tibidabo" = "Tibidabo", "madrid" = "Madrid" }
++
++[categorias.evento]
++nome = "Evento"
++multipla = true
++tags = { "copa-micfootball" = "Copa Micfootball", "copa-girona" = "Copa Girona", "desafio-barcelona" = "Desafio Barcelona", "bcn-cup" = "BCN Cup", "ibero-americano" = "Ibero Americano", "nike-3x3" = "Nike 3x3", "copa-diadora" = "Copa Diadora" }
++
++[categorias.momento]
++nome = "Momento"
++multipla = true
++tags = { "chegada" = "Chegada", "treino" = "Treino", "jogo" = "Jogo", "bastidor" = "Bastidor", "depoimento" = "Depoimento", "torcida-pais" = "Pais e torcida", "turismo" = "Turismo", "premiacao" = "Premiação" }
++
++[categorias.plano]
++nome = "Plano"
++multipla = false
++tags = { "aberto" = "Aberto", "medio" = "Médio", "fechado" = "Fechado", "detalhe" = "Detalhe", "drone" = "Drone" }
++
++[categorias.qualidade]
++nome = "Qualidade"
++multipla = false
++tags = { "otima" = "Ótima", "usavel" = "Usável", "ruim" = "Ruim" }
+diff --git a/config/marcas/exemplo/tags.toml b/config/marcas/exemplo/tags.toml
+new file mode 100644
+index 0000000..f8cbeb4
+--- /dev/null
++++ b/config/marcas/exemplo/tags.toml
+@@ -0,0 +1,28 @@
++# Tags da marca: vocabulário controlado para o import, os cortes e a busca.
++# Tags livres podem ser criadas no painel; as que se repetem podem ser promovidas para cá.
++# Cada categoria: nome, se aceita várias tags por mídia, e a lista (slug = "Nome visível").
++
++[categorias.pessoa]
++nome = "Pessoa"
++multipla = true
++tags = {}                      # ex.: { "fulano" = "Fulano da Silva" }
++
++[categorias.lugar]
++nome = "Lugar"
++multipla = true
++tags = {}
++
++[categorias.momento]
++nome = "Momento"
++multipla = true
++tags = { "chegada" = "Chegada", "treino" = "Treino", "jogo" = "Jogo", "bastidor" = "Bastidor", "depoimento" = "Depoimento" }
++
++[categorias.plano]
++nome = "Plano"
++multipla = false
++tags = { "aberto" = "Aberto", "medio" = "Médio", "fechado" = "Fechado", "detalhe" = "Detalhe", "drone" = "Drone" }
++
++[categorias.qualidade]
++nome = "Qualidade"
++multipla = false
++tags = { "otima" = "Ótima", "usavel" = "Usável", "ruim" = "Ruim" }
+diff --git a/config/padroes/separacao.toml b/config/padroes/separacao.toml
+new file mode 100644
+index 0000000..05bb2e2
+--- /dev/null
++++ b/config/padroes/separacao.toml
+@@ -0,0 +1,11 @@
++# Separação de voz e música antes de transcrever (src/transcricao/separar.py, venv .venv-sep/).
++# A marca ou o config/local.toml podem escrever por cima; por fonte: "separar" em fontes.json.
++
++modo = "auto"              # auto (só se detectar música) | sempre | nunca
++limiar_musica = 0.25       # fração do áudio fora da voz com conteúdo musical a partir da qual separa
++modelo = "model_bs_roformer_ep_317_sdr_12.9755.ckpt"   # RoFormer de vocal (audio-separator)
++modelo_leve = "UVR-MDX-NET-Voc_FT.onnx"                # reserva se faltar VRAM
++dispositivo = "auto"       # auto | cuda | cpu
++segmento_s = 8             # segmentos curtos para caber nos 4 GB de VRAM
++guardar_musica = false     # descarta o stem de música depois da transcrição
++cache = "cache/separacao"  # relativo a dados/marcas/<marca>/
+diff --git a/docs/08-plano-fase-import-voz-roteiros.md b/docs/08-plano-fase-import-voz-roteiros.md
+new file mode 100644
+index 0000000..ca11406
+--- /dev/null
++++ b/docs/08-plano-fase-import-voz-roteiros.md
+@@ -0,0 +1,147 @@
++# 08 — Plano da fase: tags no import, cortes, voz sem música, roteiros abertos, FilmCraft
++
++Decisões tomadas com o Lucas (2026-11-13):
++
++- **Tags**: lista fixa por marca (`config/marcas/<marca>/tags.toml`) **+ tags livres**; a IA
++  sugere, a pessoa confirma.
++- **Cortes**: mistura de três origens — frases da fala, mudança de cena e marcação manual — e
++  são **só anotações** (entrada/saída + tags), nunca arquivos novos.
++- **Separação voz/música**: automática quando houver música de fundo; dá para forçar por fonte.
++- **Roteiros**: menos engessados, com espaço real para input humano.
++- **Projetos**: edição integrada ao FilmCraft (ida e volta), não só geração.
++
++Ordem de trabalho (cada uma num branch, com commit antes):
++
++| # | branch | depende de | entrega |
++|---|---|---|---|
++| 1 | `fase/separacao-voz` | — | transcrição melhor já no próximo import |
++| 2 | `fase/tags-import` | — | modelo de dados de mídia/corte/tag + aba importar nova |
++| 3 | `fase/cortes` | 1, 2 | cortes automáticos (fala + cena) e manuais no preview |
++| 4 | `fase/roteiros-abertos` | 2, 3 | roteiro editável por humano, busca usando tags e cortes |
++| 5 | `fase/filmcraft-sync` | 4 | ler o `.fcproj` de volta e manter roteiro ↔ projeto em sincronia |
++
++---
++
++## 1. Separação de voz antes de transcrever
++
++**Onde entra:** `src/transcricao/legendar.py::transcrever`, entre `audio_do_video()` e o
++`faster-whisper`. Novo módulo `src/transcricao/separar.py`, rodando no `.venv-sep/`.
++
++**Fluxo**
++
++1. `audio_do_video()` → wav 16 kHz mono (já existe).
++2. `tem_musica(wav)` — detecção barata, sem GPU: energia fora da faixa de voz + proporção de
++   quadros "tonais" fora das regiões de voz do VAD (`voz.analisar` já dá as regiões). Se a
++   fração musical passar de `separacao.limiar_musica`, separa. Cache do resultado por hash.
++3. `separar(wav)` → `<cache>/sep/<hash>_voz.wav` com [`audio-separator`](https://github.com/nomadkaraoke/python-audio-separator)
++   (modelos UVR/MDX/RoFormer). Modelo padrão: um RoFormer de vocal; alternativa leve
++   `UVR-MDX-NET-Voc_FT` se faltar VRAM. Segmentos curtos para caber nos 4 GB; CPU como reserva.
++4. O whisper e o `refinar_pela_voz` rodam na **voz isolada**; os tempos continuam valendo para
++   o vídeo original (mesma duração, mesma taxa).
++5. Grava no `words.json` de que áudio veio (`"fonte_audio": "separada" | "original"`) e o
++   modelo, para poder re-transcrever só o que mudou.
++
++**Config:** `config/padroes/separacao.toml` (já criado). Por fonte, em `fontes.json`:
++`"separar": "auto" | "sempre" | "nunca"`.
++
++**Ganho extra:** o mesmo stem de voz melhora o silencecut e o VAD; o stem de música pode virar
++"trilha original" na montagem (opcional, depois).
++
++**Testes:** `tem_musica` com sinais sintéticos (seno + ruído vs. só ruído modulado);
++`separar` com mock do subprocess. Nada de modelo real nos testes.
++
++## 2. Interface de tags no import
++
++### Modelo de dados (sqlite em `dados/marcas/<marca>/midia.sqlite`)
++
++```
++midia(id, fonte_id, caminho_rel, tipo, duracao, largura, altura, hash_rapido, status_import)
++tag(id, slug, nome, categoria, origem)          -- origem: marca | livre
++midia_tag(midia_id, tag_id, por)                -- por: humano | ia_sugerida | ia_aceita
++corte(id, midia_id, ini, fim, origem, titulo, nota, nota_ia, criado_em)
++                                               -- origem: fala | cena | manual
++corte_tag(corte_id, tag_id, por)
++```
++
++- `hash_rapido` (tamanho + primeiros/últimos MB) para reconhecer arquivo movido sem reprocessar.
++- `status_import`: `novo → indexado → (separado) → transcrito → cortado → revisado`.
++- O índice FTS de `achar/indice.py` ganha colunas de tags e cortes (busca por "tag:camp-nou").
++
++### Fluxo na aba importar
++
++1. Apontar pasta (como hoje) → os vídeos novos caem numa **fila de revisão**, não direto no índice.
++2. Fila em grade (reaproveita `ui/grade.rs`): miniatura, duração, status; seleção múltipla.
++3. Painel lateral de tags: categorias da marca como pastilhas + campo de tag livre com
++   autocompletar; aplicar a N selecionados de uma vez. Sugestões da IA aparecem tracejadas;
++   um clique aceita, outro descarta.
++4. "Marcar como revisado" libera a mídia para roteiros e b-roll.
++
++**Sugestão de tags (IA):** texto da transcrição + 3–4 quadros (os mesmos da tira do preview,
++em 360 px) → Claude com a lista da marca no prompt; resposta JSON só com slugs da lista ou
++tags livres marcadas como novas. Em lote, de forma assíncrona (fila de tarefas que já existe).
++
++## 3. Cortes como anotação
++
++Três geradores, todos escrevendo na tabela `corte` — nunca no disco do acervo:
++
++| origem | como | para |
++|---|---|---|
++| `fala` | `plano/falas.frases_de()` agrupa frases em ideias (pausa > X s ou mudança de assunto pela IA) | falas |
++| `cena` | PySceneDetect (`ContentDetector`) no proxy 360p, no `.venv-sep` ou no sistema | broll |
++| `manual` | entrada/saída no preview (`I`/`O` na tira de quadros), com tags e nota | qualquer |
++
++- Cortes automáticos nascem como **propostos**; no preview a pessoa ajusta borda, junta, divide,
++  apaga. Um corte manual nunca é sobrescrito por reprocessamento.
++- Tags da mídia são herdadas pelo corte; tags do corte são mais específicas.
++- `projetos/gerar` e `roteiros` passam a aceitar `corte_id` onde hoje aceitam vídeo + tempo.
++
++## 4. Roteiros menos engessados
++
++Hoje: a IA escreve tudo, a pessoa só move/remove/troca candidato, e depois de aprovado trava.
++
++Novo modelo — **o roteiro é um documento de trabalho conjunto**:
++
++- **Começar de qualquer ponto:** da ideia da IA, de um texto livre do Lucas (briefing, tópicos),
++  ou de cortes escolhidos à mão na grade ("montar roteiro com estes").
++- **Partes livres:** adicionar parte em qualquer lugar; tipos `fala` (corte existente), `nova`
++  (texto a gravar), `locucao`, `texto_na_tela`, `respiro` (só imagem/música). Duração editável.
++- **Nota de direção por parte** (humano) e **por roteiro**; a IA lê as notas ao reescrever.
++- **"Reescrever só esta parte"** / **"sugerir alternativas"**: a IA propõe 3 opções para uma
++  parte, mantendo o resto travado. Partes podem ser marcadas como **fixas** (a IA não mexe).
++- **Trocar fala por outra parecida:** busca no banco de falas + cortes por tags e semelhança.
++- **Aparar fala:** ajustar entrada/saída da fala em palavras (a transcrição dá os tempos).
++- **Versões:** cada salvamento grava `roteiros/<id>/v<n>.json`; dá para comparar e voltar.
++- **Aprovado não trava:** aprovar gera o projeto; mudanças depois vão para o projeto pela
++  sincronia (seção 5), com aviso quando o projeto foi editado à mão no FilmCraft.
++
++Mudanças em `plano/roteiros.py`: `editar()` ganha `inserir`, `tipo`, `duracao`, `aparar`,
++`nota`, `fixar`, `reescrever_parte`; formato de arquivo com `versao`. Prompts em
++`plano/prompts.py` passam a receber notas e partes fixas.
++
++## 5. Edição integrada com o FilmCraft
++
++Hoje a ida é boa (`gerar`, `fcproj.ganho/legendas`), mas não há volta.
++
++1. **Mapa roteiro ↔ timeline:** ao aprovar, cada clipe gerado recebe no `.fcproj` um marcador
++   com `parte_id` (campo de nome/nota do clipe que o FilmCraft preserva — confirmar com
++   `filmcraft-cli inspect`). Guardar também em `roteiros/<id>/mapa.json`.
++2. **Ler de volta:** `linha_tempo.ler()` já lê o projeto; novo `projetos/sincronia.py` compara
++   o projeto atual com o mapa e lista: partes cortadas, reordenadas, aparadas, clipes novos.
++3. **Duas direções, sempre com confirmação:**
++   - FilmCraft → roteiro: "o projeto mudou; atualizar o roteiro?" (aplica ordem e tempos).
++   - roteiro → FilmCraft: aplicar só a parte mudada (trocar clipe, aparar), via `fcproj.salvar`
++     com cópia e `inspect`. Nunca regerar o projeto inteiro se ele já foi editado à mão.
++4. **Abrir no FilmCraft** a partir do painel, no tempo da parte (se o CLI aceitar `--seek`;
++   senão só abrir o projeto).
++5. Detectar edição externa por `mtime` + hash do `.fcproj`; mostrar no card do projeto.
++
++**A investigar primeiro:** que campos do clipe o FilmCraft preserva ao salvar (para o marcador
++`parte_id`) e o que o `filmcraft-cli` oferece além de `probe` e `inspect`.
++
++---
++
++## Perguntas em aberto
++
++- Quantas tags livres viram categoria da marca? (revisar a cada ~50 mídias importadas)
++- Cortes por fala: agrupar por pausa ou pedir à IA os limites de ideia? (começar por pausa)
++- O stem de música deve ser guardado ou descartado depois da transcrição? (padrão: descartar)
+diff --git a/requirements-separacao.txt b/requirements-separacao.txt
+new file mode 100644
+index 0000000..4ff3897
+--- /dev/null
++++ b/requirements-separacao.txt
+@@ -0,0 +1,5 @@
++# Separação de voz/música (audio-separator: modelos UVR/MDX/RoFormer). Venv próprio, separado do ASR:
++#   python3.11 -m venv .venv-sep && .venv-sep/bin/pip install -r requirements-separacao.txt
++# Depois da primeira instalação que funcionar, fixe as versões aqui (pip freeze), como no requirements-asr.txt.
++audio-separator[gpu]
++scenedetect[opencv-headless]
+-- 
+2.43.0
+

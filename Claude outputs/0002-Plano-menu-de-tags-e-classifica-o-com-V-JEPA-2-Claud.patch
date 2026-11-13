@@ -1,0 +1,147 @@
+From f2bef72976c99e7b70951c198cc414f56ab6d825 Mon Sep 17 00:00:00 2001
+From: Lucas <lucnog42@users.noreply.github.com>
+Date: Fri, 13 Nov 2026 11:01:30 -0300
+Subject: [PATCH 2/2] =?UTF-8?q?Plano:=20menu=20de=20tags=20e=20classifica?=
+ =?UTF-8?q?=C3=A7=C3=A3o=20com=20V-JEPA=202=20+=20Claude=20para=20tags=20n?=
+ =?UTF-8?q?ovas?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01BcNGM3PW4msntB5yGHEBbB
+---
+ .gitignore                                |  1 +
+ CLAUDE.md                                 |  1 +
+ config/padroes/classificacao.toml         | 11 +++++
+ docs/08-plano-fase-import-voz-roteiros.md | 51 +++++++++++++++++++++--
+ requirements-visao.txt                    |  7 ++++
+ 5 files changed, 68 insertions(+), 3 deletions(-)
+ create mode 100644 config/padroes/classificacao.toml
+ create mode 100644 requirements-visao.txt
+
+diff --git a/.gitignore b/.gitignore
+index 5a9cd21..9ad12fe 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -4,6 +4,7 @@ dados/
+ config/local.toml
+ .venv-asr/
+ .venv-sep/
++.venv-visao/
+ app/target/
+ __pycache__/
+ *.pyc
+diff --git a/CLAUDE.md b/CLAUDE.md
+index bb4dd44..cdcaf93 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -61,6 +61,7 @@ cp ~/.cache/ng3-target/release/ng3-painel ./ng3-painel
+ | sistema `python3` | painel, api, roteiros, projetos | só stdlib + numpy |
+ | `.venv-asr/` | transcrição (faster-whisper, CUDA 12) | `requirements-asr.txt` |
+ | `.venv-sep/` | separação de voz/música | `requirements-separacao.txt` |
++| `.venv-visao/` | V-JEPA 2 + SigLIP (tags) | `requirements-visao.txt` |
+ 
+ Venvs separados de propósito: torch/onnxruntime-gpu da separação brigam com as versões fixas
+ do ASR. O motor chama cada venv por subprocess, como `legendar.garantir_venv()` já faz.
+diff --git a/config/padroes/classificacao.toml b/config/padroes/classificacao.toml
+new file mode 100644
+index 0000000..f16c770
+--- /dev/null
++++ b/config/padroes/classificacao.toml
+@@ -0,0 +1,11 @@
++# Classificação de mídias nas tags da marca (V-JEPA 2 + classificador leve + Claude para tags novas).
++
++modelo_video = "facebook/vjepa2-vitl-fpc64-256"   # ViT-L: cabe nos 4 GB em fp16 (o ViT-g não)
++modelo_texto_imagem = "google/siglip-base-patch16-224"   # partida a frio (tag sem exemplos)
++janela_s = 4.0              # trecho por embedding quando a mídia não tem cortes
++exemplos_minimos = 5        # abaixo disso a tag usa a partida a frio
++limiar_sugerir = 0.55       # confiança para aparecer como sugestão
++limiar_pre_marcar = 0.85    # confiança para vir pré-marcada (ainda precisa de um clique)
++limiar_novidade = 0.35      # abaixo disso em todas as tags da categoria = "nenhuma serve"
++grupo_minimo = 4            # mídias parecidas sem tag antes de pedir uma tag nova à IA
++quadros_para_ia = 5         # quadros enviados ao Claude ao propor tag nova
+diff --git a/docs/08-plano-fase-import-voz-roteiros.md b/docs/08-plano-fase-import-voz-roteiros.md
+index ca11406..86d2903 100644
+--- a/docs/08-plano-fase-import-voz-roteiros.md
++++ b/docs/08-plano-fase-import-voz-roteiros.md
+@@ -76,9 +76,53 @@ corte_tag(corte_id, tag_id, por)
+    um clique aceita, outro descarta.
+ 4. "Marcar como revisado" libera a mídia para roteiros e b-roll.
+ 
+-**Sugestão de tags (IA):** texto da transcrição + 3–4 quadros (os mesmos da tira do preview,
+-em 360 px) → Claude com a lista da marca no prompt; resposta JSON só com slugs da lista ou
+-tags livres marcadas como novas. Em lote, de forma assíncrona (fila de tarefas que já existe).
++### Menu de categorias e tags (gerenciador)
++
++Um menu próprio ("tags da marca"), separado da fila de import:
++
++- Lista de **categorias** com a contagem de entradas (mídias + cortes) em cada uma, e dentro
++  dela as tags com a contagem de cada tag.
++- **Criar, renomear e remover** categoria ou tag; **criar em lote** (colar uma lista, uma por
++  linha, `slug = Nome` ou só o nome). Renomear muda só o nome visível; o `slug` fica, para não
++  quebrar as marcações. Remover pede destino: apagar as marcações ou **fundir** em outra tag.
++- **Recomendações da IA**: lista de tags propostas (nome, categoria sugerida, quantas mídias
++  cairiam nela, 4 miniaturas de exemplo, o motivo). Ações: aceitar, renomear e aceitar, fundir
++  numa existente, descartar (a IA não volta a propor a mesma).
++- Tudo grava em `config/marcas/<marca>/tags.toml` (escrita atômica, com cópia em `historico/`);
++  as contagens vêm do `midia.sqlite`.
++
++### Classificação automática: V-JEPA 2 + uma segunda IA para tags novas
++
++**V-JEPA 2** (Meta, código aberto) entende vídeo de verdade (movimento, ação), não só quadros
++soltos. Mas ele **não lê texto**: dá um vetor (embedding) por trecho de vídeo e não sabe o que
++é "treino" ou "Camp Nou" sozinho. Por isso o desenho é:
++
++1. **Embeddings** — cada corte (ou janela de ~4 s nos vídeos sem corte) passa pelo V-JEPA 2
++   **ViT-L** (300 M parâmetros, fp16, cabe nos 4 GB; o ViT-g não cabe). Vetores guardados em
++   `dados/marcas/<marca>/embeddings/vjepa2.npy` + id no sqlite. Roda em lote, de madrugada, em
++   série com o whisper (nunca os dois na GPU). Venv próprio `.venv-visao/`.
++2. **Classificador por tag** — com as marcações que você confirmar, um classificador leve por
++   categoria (regressão logística / k-vizinhos sobre os embeddings, CPU, segundos). Aprende
++   com poucos exemplos (~5–10 por tag) e melhora a cada confirmação.
++3. **Partida a frio** (tag nova, sem exemplos ainda) — para não depender só de marcações à mão:
++   texto da transcrição + **SigLIP** (modelo imagem↔texto) nos quadros, comparando com o nome e
++   a descrição da tag. Fica como sugestão até ter exemplos para o classificador do passo 2.
++4. **Quando nenhuma tag serve** — o sinal de "existe uma descrição melhor" é: confiança baixa
++   em todas as tags da categoria **e** o vídeo forma grupo com outros parecidos (agrupamento
++   dos embeddings que não caem perto de nenhuma tag). Um grupo com ≥ N mídias vai para a
++   **segunda IA (Claude)** com 4–6 quadros, trechos da fala e a lista atual de tags; ela propõe
++   nome, categoria e descrição de uma tag nova, ou responde "é a tag X existente". A proposta
++   cai na lista de **recomendações** do menu — nada entra na marca sem você aceitar.
++5. **Saída para a pessoa** — cada sugestão aparece na fila de import tracejada, com a
++   confiança; acima de um limiar alto pode vir pré-marcada (`ia_sugerida`), mas só vira
++   `ia_aceita` com um clique.
++
++Config em `config/padroes/classificacao.toml`: modelo, janela, limiares de confiança e de
++novidade, tamanho mínimo de grupo para pedir tag nova.
++
++**Alternativa a avaliar depois:** **VL-JEPA** (Meta, dez/2025) junta o JEPA com texto e
++classificaria direto pelo nome da tag; trocar o passo 3 por ele se os pesos ficarem
++disponíveis e couberem na GPU.
+ 
+ ## 3. Cortes como anotação
+ 
+@@ -143,5 +187,6 @@ Hoje a ida é boa (`gerar`, `fcproj.ganho/legendas`), mas não há volta.
+ ## Perguntas em aberto
+ 
+ - Quantas tags livres viram categoria da marca? (revisar a cada ~50 mídias importadas)
++- Limiar de novidade e tamanho mínimo de grupo para pedir tag nova: calibrar com ~200 vídeos já marcados.
+ - Cortes por fala: agrupar por pausa ou pedir à IA os limites de ideia? (começar por pausa)
+ - O stem de música deve ser guardado ou descartado depois da transcrição? (padrão: descartar)
+diff --git a/requirements-visao.txt b/requirements-visao.txt
+new file mode 100644
+index 0000000..12eea86
+--- /dev/null
++++ b/requirements-visao.txt
+@@ -0,0 +1,7 @@
++# Visão (V-JEPA 2 + SigLIP) para classificar mídias nas tags. Venv próprio:
++#   python3.11 -m venv .venv-visao && .venv-visao/bin/pip install -r requirements-visao.txt
++# Fixe as versões depois da primeira instalação que funcionar.
++torch
++transformers>=4.53
++scikit-learn
++av
+-- 
+2.43.0
+

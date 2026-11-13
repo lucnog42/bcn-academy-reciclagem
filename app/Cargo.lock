@@ -2710,6 +2710,7 @@ dependencies = [
 [[package]]
 name = "rune"
 version = "0.0.1"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 dependencies = [
  "accesskit",
  "accesskit_macos",
@@ -2790,6 +2791,7 @@ dependencies = [
 [[package]]
 name = "rune-highlights"
 version = "0.0.1"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 dependencies = [
  "unicode-ident",
  "wasmparser",
@@ -2798,6 +2800,7 @@ dependencies = [
 [[package]]
 name = "rune-kit"
 version = "0.0.1"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 dependencies = [
  "rune",
  "rune-highlights",
@@ -2808,6 +2811,7 @@ dependencies = [
 [[package]]
 name = "rune-luau"
 version = "0.0.1"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 dependencies = [
  "js-sys",
  "mlua",
@@ -2824,10 +2828,12 @@ dependencies = [
 [[package]]
 name = "rune-motion"
 version = "0.1.0"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 
 [[package]]
 name = "rune-staging"
 version = "0.0.1"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 dependencies = [
  "wgpu",
 ]
@@ -2835,6 +2841,7 @@ dependencies = [
 [[package]]
 name = "rune-taffy"
 version = "0.0.1"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 dependencies = [
  "taffy",
 ]
@@ -3918,6 +3925,7 @@ dependencies = [
 [[package]]
 name = "wgpu-hal"
 version = "30.0.1"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 dependencies = [
  "android_system_properties",
  "arrayvec",
@@ -4199,6 +4207,7 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 [[package]]
 name = "winit"
 version = "0.30.13"
+source = "git+https://github.com/anomalyco/rune?rev=d91315e4c89837bec7fadfaf14f26d02534c444f#d91315e4c89837bec7fadfaf14f26d02534c444f"
 dependencies = [
  "ahash",
  "android-activity",
