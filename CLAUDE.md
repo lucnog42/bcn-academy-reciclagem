@@ -61,6 +61,7 @@ cp ~/.cache/ng3-target/release/ng3-painel ./ng3-painel
 | sistema `python3` | painel, api, roteiros, projetos | só stdlib + numpy |
 | `.venv-asr/` | transcrição (faster-whisper, CUDA 12) | `requirements-asr.txt` |
 | `.venv-sep/` | separação de voz/música | `requirements-separacao.txt` |
+| `.venv-visao/` | V-JEPA 2 + SigLIP (tags) | `requirements-visao.txt` |
 
 Venvs separados de propósito: torch/onnxruntime-gpu da separação brigam com as versões fixas
 do ASR. O motor chama cada venv por subprocess, como `legendar.garantir_venv()` já faz.

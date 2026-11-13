@@ -1,0 +1,7 @@
+# Visão (V-JEPA 2 + SigLIP) para classificar mídias nas tags. Venv próprio:
+#   python3.11 -m venv .venv-visao && .venv-visao/bin/pip install -r requirements-visao.txt
+# Fixe as versões depois da primeira instalação que funcionar.
+torch
+transformers>=4.53
+scikit-learn
+av

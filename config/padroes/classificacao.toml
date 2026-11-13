@@ -1,0 +1,11 @@
+# Classificação de mídias nas tags da marca (V-JEPA 2 + classificador leve + Claude para tags novas).
+
+modelo_video = "facebook/vjepa2-vitl-fpc64-256"   # ViT-L: cabe nos 4 GB em fp16 (o ViT-g não)
+modelo_texto_imagem = "google/siglip-base-patch16-224"   # partida a frio (tag sem exemplos)
+janela_s = 4.0              # trecho por embedding quando a mídia não tem cortes
+exemplos_minimos = 5        # abaixo disso a tag usa a partida a frio
+limiar_sugerir = 0.55       # confiança para aparecer como sugestão
+limiar_pre_marcar = 0.85    # confiança para vir pré-marcada (ainda precisa de um clique)
+limiar_novidade = 0.35      # abaixo disso em todas as tags da categoria = "nenhuma serve"
+grupo_minimo = 4            # mídias parecidas sem tag antes de pedir uma tag nova à IA
+quadros_para_ia = 5         # quadros enviados ao Claude ao propor tag nova

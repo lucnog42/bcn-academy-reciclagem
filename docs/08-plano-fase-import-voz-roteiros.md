@@ -76,9 +76,53 @@ corte_tag(corte_id, tag_id, por)
    um clique aceita, outro descarta.
 4. "Marcar como revisado" libera a mídia para roteiros e b-roll.
 
-**Sugestão de tags (IA):** texto da transcrição + 3–4 quadros (os mesmos da tira do preview,
-em 360 px) → Claude com a lista da marca no prompt; resposta JSON só com slugs da lista ou
-tags livres marcadas como novas. Em lote, de forma assíncrona (fila de tarefas que já existe).
+### Menu de categorias e tags (gerenciador)
+
+Um menu próprio ("tags da marca"), separado da fila de import:
+
+- Lista de **categorias** com a contagem de entradas (mídias + cortes) em cada uma, e dentro
+  dela as tags com a contagem de cada tag.
+- **Criar, renomear e remover** categoria ou tag; **criar em lote** (colar uma lista, uma por
+  linha, `slug = Nome` ou só o nome). Renomear muda só o nome visível; o `slug` fica, para não
+  quebrar as marcações. Remover pede destino: apagar as marcações ou **fundir** em outra tag.
+- **Recomendações da IA**: lista de tags propostas (nome, categoria sugerida, quantas mídias
+  cairiam nela, 4 miniaturas de exemplo, o motivo). Ações: aceitar, renomear e aceitar, fundir
+  numa existente, descartar (a IA não volta a propor a mesma).
+- Tudo grava em `config/marcas/<marca>/tags.toml` (escrita atômica, com cópia em `historico/`);
+  as contagens vêm do `midia.sqlite`.
+
+### Classificação automática: V-JEPA 2 + uma segunda IA para tags novas
+
+**V-JEPA 2** (Meta, código aberto) entende vídeo de verdade (movimento, ação), não só quadros
+soltos. Mas ele **não lê texto**: dá um vetor (embedding) por trecho de vídeo e não sabe o que
+é "treino" ou "Camp Nou" sozinho. Por isso o desenho é:
+
+1. **Embeddings** — cada corte (ou janela de ~4 s nos vídeos sem corte) passa pelo V-JEPA 2
+   **ViT-L** (300 M parâmetros, fp16, cabe nos 4 GB; o ViT-g não cabe). Vetores guardados em
+   `dados/marcas/<marca>/embeddings/vjepa2.npy` + id no sqlite. Roda em lote, de madrugada, em
+   série com o whisper (nunca os dois na GPU). Venv próprio `.venv-visao/`.
+2. **Classificador por tag** — com as marcações que você confirmar, um classificador leve por
+   categoria (regressão logística / k-vizinhos sobre os embeddings, CPU, segundos). Aprende
+   com poucos exemplos (~5–10 por tag) e melhora a cada confirmação.
+3. **Partida a frio** (tag nova, sem exemplos ainda) — para não depender só de marcações à mão:
+   texto da transcrição + **SigLIP** (modelo imagem↔texto) nos quadros, comparando com o nome e
+   a descrição da tag. Fica como sugestão até ter exemplos para o classificador do passo 2.
+4. **Quando nenhuma tag serve** — o sinal de "existe uma descrição melhor" é: confiança baixa
+   em todas as tags da categoria **e** o vídeo forma grupo com outros parecidos (agrupamento
+   dos embeddings que não caem perto de nenhuma tag). Um grupo com ≥ N mídias vai para a
+   **segunda IA (Claude)** com 4–6 quadros, trechos da fala e a lista atual de tags; ela propõe
+   nome, categoria e descrição de uma tag nova, ou responde "é a tag X existente". A proposta
+   cai na lista de **recomendações** do menu — nada entra na marca sem você aceitar.
+5. **Saída para a pessoa** — cada sugestão aparece na fila de import tracejada, com a
+   confiança; acima de um limiar alto pode vir pré-marcada (`ia_sugerida`), mas só vira
+   `ia_aceita` com um clique.
+
+Config em `config/padroes/classificacao.toml`: modelo, janela, limiares de confiança e de
+novidade, tamanho mínimo de grupo para pedir tag nova.
+
+**Alternativa a avaliar depois:** **VL-JEPA** (Meta, dez/2025) junta o JEPA com texto e
+classificaria direto pelo nome da tag; trocar o passo 3 por ele se os pesos ficarem
+disponíveis e couberem na GPU.
 
 ## 3. Cortes como anotação
 
@@ -143,5 +187,6 @@ Hoje a ida é boa (`gerar`, `fcproj.ganho/legendas`), mas não há volta.
 ## Perguntas em aberto
 
 - Quantas tags livres viram categoria da marca? (revisar a cada ~50 mídias importadas)
+- Limiar de novidade e tamanho mínimo de grupo para pedir tag nova: calibrar com ~200 vídeos já marcados.
 - Cortes por fala: agrupar por pausa ou pedir à IA os limites de ideia? (começar por pausa)
 - O stem de música deve ser guardado ou descartado depois da transcrição? (padrão: descartar)
