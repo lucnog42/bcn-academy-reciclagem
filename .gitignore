@@ -3,6 +3,7 @@ dados/
 # chaves e caminhos desta máquina
 config/local.toml
 .venv-asr/
+.venv-sep/
 app/target/
 __pycache__/
 *.pyc

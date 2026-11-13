@@ -1,0 +1,11 @@
+# Separação de voz e música antes de transcrever (src/transcricao/separar.py, venv .venv-sep/).
+# A marca ou o config/local.toml podem escrever por cima; por fonte: "separar" em fontes.json.
+
+modo = "auto"              # auto (só se detectar música) | sempre | nunca
+limiar_musica = 0.25       # fração do áudio fora da voz com conteúdo musical a partir da qual separa
+modelo = "model_bs_roformer_ep_317_sdr_12.9755.ckpt"   # RoFormer de vocal (audio-separator)
+modelo_leve = "UVR-MDX-NET-Voc_FT.onnx"                # reserva se faltar VRAM
+dispositivo = "auto"       # auto | cuda | cpu
+segmento_s = 8             # segmentos curtos para caber nos 4 GB de VRAM
+guardar_musica = false     # descarta o stem de música depois da transcrição
+cache = "cache/separacao"  # relativo a dados/marcas/<marca>/

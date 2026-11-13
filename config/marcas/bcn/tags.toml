@@ -1,0 +1,33 @@
+# Tags da BCN: vocabulário controlado para o import, os cortes e a busca.
+# Tags livres podem ser criadas no painel; as que se repetem podem ser promovidas para cá.
+# Cada categoria: nome, se aceita várias tags por mídia, e a lista (slug = "Nome visível").
+
+[categorias.pessoa]
+nome = "Pessoa"
+multipla = true
+tags = {}                      # ex.: { "fulano" = "Fulano da Silva" }
+
+[categorias.lugar]
+nome = "Lugar"
+multipla = true
+tags = { "barcelona" = "Barcelona", "camp-nou" = "Camp Nou", "la-masia" = "La Masia", "lloret" = "Lloret de Mar", "girona" = "Girona", "tibidabo" = "Tibidabo", "madrid" = "Madrid" }
+
+[categorias.evento]
+nome = "Evento"
+multipla = true
+tags = { "copa-micfootball" = "Copa Micfootball", "copa-girona" = "Copa Girona", "desafio-barcelona" = "Desafio Barcelona", "bcn-cup" = "BCN Cup", "ibero-americano" = "Ibero Americano", "nike-3x3" = "Nike 3x3", "copa-diadora" = "Copa Diadora" }
+
+[categorias.momento]
+nome = "Momento"
+multipla = true
+tags = { "chegada" = "Chegada", "treino" = "Treino", "jogo" = "Jogo", "bastidor" = "Bastidor", "depoimento" = "Depoimento", "torcida-pais" = "Pais e torcida", "turismo" = "Turismo", "premiacao" = "Premiação" }
+
+[categorias.plano]
+nome = "Plano"
+multipla = false
+tags = { "aberto" = "Aberto", "medio" = "Médio", "fechado" = "Fechado", "detalhe" = "Detalhe", "drone" = "Drone" }
+
+[categorias.qualidade]
+nome = "Qualidade"
+multipla = false
+tags = { "otima" = "Ótima", "usavel" = "Usável", "ruim" = "Ruim" }

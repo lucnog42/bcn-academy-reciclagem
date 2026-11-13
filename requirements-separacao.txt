@@ -1,0 +1,5 @@
+# Separação de voz/música (audio-separator: modelos UVR/MDX/RoFormer). Venv próprio, separado do ASR:
+#   python3.11 -m venv .venv-sep && .venv-sep/bin/pip install -r requirements-separacao.txt
+# Depois da primeira instalação que funcionar, fixe as versões aqui (pip freeze), como no requirements-asr.txt.
+audio-separator[gpu]
+scenedetect[opencv-headless]
